@@ -2,6 +2,7 @@
 
 ## Table of Contents
 - [Overview](#overview)
+- [Demo](#demo)
 - [Key Features](#key-features)
 - [Technologies Used](#technologies-used)
 - [Setup and Installation](#setup-and-installation)
@@ -13,6 +14,10 @@
 ## Overview
 
 Mind Mentor is an innovative AI-powered study assistant designed to revolutionize the way students learn and prepare for exams. Leveraging cutting-edge AI technologies, Mind Mentor offers personalized study plans, curates learning resources, and provides intelligent assistance to accelerate your learning journey.
+
+## Demo
+
+https://github.com/user-attachments/assets/7406e7f2-f7bd-472a-90e4-2a82b5465efb
 
 ## Key Features
 

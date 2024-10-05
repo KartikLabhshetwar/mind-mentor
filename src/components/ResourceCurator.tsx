@@ -1,11 +1,11 @@
 "use client"
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -23,7 +23,8 @@ export default function ResourceCurator() {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleCurateResources = async () => {
+  const handleCurateResources = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     setError(null);
     try {
@@ -57,50 +58,44 @@ export default function ResourceCurator() {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Find Free Learning Resources</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-white/10 backdrop-blur-lg rounded-lg p-6 shadow-lg hover:shadow-blue-500/20 transition-all duration-300"
+    >
+      <h2 className="text-2xl font-semibold text-blue-400 mb-4">AI-Curated Resources</h2>
+      <form onSubmit={handleCurateResources} className="space-y-4">
         <Input
           type="text"
+          placeholder="Enter a topic"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          placeholder="Enter subject for resources"
+          className="bg-white/20 border-white/10 text-white placeholder-white/50"
         />
-        <Button onClick={handleCurateResources} disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Finding Resources...
-            </>
-          ) : (
-            'Find Resources'
-          )}
+        <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white" disabled={isLoading}>
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isLoading ? 'Curating...' : 'Curate Resources'}
         </Button>
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {resources.length > 0 && (
-          <ScrollArea className="h-[400px] w-full pr-4">
-            {resources.map((resource, index) => (
-              <Card key={index} className="mb-4">
-                <CardContent className="pt-4">
-                  <h3 className="text-lg font-semibold mb-2">{resource.title}</h3>
-                  <p className="text-sm mb-2">{resource.description}</p>
-                  <p className="text-xs text-muted-foreground mb-2">Type: {resource.type}</p>
-                  <a href={resource.link} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline">
-                    Access Resource
-                  </a>
-                </CardContent>
-              </Card>
-            ))}
-          </ScrollArea>
-        )}
-      </CardContent>
-    </Card>
+      </form>
+      {resources.length > 0 && (
+        <ScrollArea className="h-[300px] mt-4">
+          {resources.map((resource, index) => (
+            <Card key={index} className="mb-4 bg-white/5 border-white/10">
+              <CardHeader>
+                <CardTitle className="text-blue-300">{resource.title}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-blue-100">{resource.description}</p>
+                <a href={resource.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline mt-2 inline-block">
+                  Learn More
+                </a>
+              </CardContent>
+            </Card>
+          ))}
+        </ScrollArea>
+      )}
+      {error && <p className="text-red-500 mt-4">{error}</p>}
+    </motion.div>
   );
 }

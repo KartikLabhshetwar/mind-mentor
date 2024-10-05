@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   1. The title of the resource
   2. A brief description (1-2 sentences)
   3. The type of resource (e.g., online course, video tutorial, interactive website)
-  4. A direct link to the resource
+  4. A valid URL to the resource which is working and accessible
   
   Format the response as a JSON array of objects, with each object containing the fields: title, description, type, and link.`;
 

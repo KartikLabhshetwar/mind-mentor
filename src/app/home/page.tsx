@@ -70,7 +70,7 @@ export default function Home() {
 
         <footer className="bg-black/50 backdrop-blur-lg text-white py-8 relative z-10 border-t border-white/10">
           <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-center items-center">
               <div className="text-sm">
                 © {new Date().getFullYear()} Mind Mentor. All rights reserved.
               </div>

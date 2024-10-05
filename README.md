@@ -17,14 +17,7 @@ Mind Mentor is an innovative AI-powered study assistant designed to revolutioniz
 
 ## Demo
 
-
-
-https://github.com/user-attachments/assets/69cbf92f-3549-4f80-afd4-6ee8318cfa66
-
-
-
-
-
+https://github.com/user-attachments/assets/7406e7f2-f7bd-472a-90e4-2a82b5465efb
 
 ## Key Features
 

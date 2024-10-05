@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 
 interface Resource {
   title: string;
@@ -19,6 +21,7 @@ export default function ResourceCurator() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleCurateResources = async () => {
     setIsLoading(true);
@@ -32,11 +35,22 @@ export default function ResourceCurator() {
       const data = await response.json();
       if (response.ok) {
         setResources(data.resources);
+        toast({
+          title: "Resources Found",
+          description: `Found ${data.resources.length} resources for ${subject}`,
+          action: <ToastAction altText="View resources">View resources</ToastAction>,
+        });
       } else {
         throw new Error(data.error || 'Failed to fetch resources');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }

@@ -9,7 +9,7 @@ export default function Home() {
       <Card>
         <CardHeader>
           <CardTitle className="text-4xl">Mind Mentor</CardTitle>
-          <CardDescription>Generate study plans, find resources, and get answers to your questions</CardDescription>
+          <CardDescription className='text-lg'>Generate study plans, find resources, and get answers to your questions</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <StudyPlanForm />

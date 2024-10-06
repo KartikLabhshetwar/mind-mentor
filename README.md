@@ -1,4 +1,4 @@
-# Mind Mentor: AI-Powered Study Assistant
+# Mind Mentor: AI-Powered Study Assistant 
 
 ## Table of Contents
 - [Overview](#overview)

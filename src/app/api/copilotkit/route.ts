@@ -1,30 +1,25 @@
 import {
   CopilotRuntime,
-  GoogleGenerativeAIAdapter,
+  GroqAdapter,
   copilotRuntimeNextJSAppRouterEndpoint,
-} from '@copilotkit/runtime';
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { NextRequest } from 'next/server';
+} from "@copilotkit/runtime";
+import Groq from "groq-sdk";
+import { NextRequest } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const groq = new Groq({ apiKey: process.env["GROQ_API_KEY"] });
 
-const llmAdapter = new GoogleGenerativeAIAdapter({ 
-  model: genAI.getGenerativeModel({ model: "gemini-1.5-pro" }),
-  generationConfig: {
-    temperature: 0.5,
-    maxOutputTokens: 1024,
-    topP: 0.95,
-    topK: 1,
-  },
+const copilotKit = new CopilotRuntime();
+
+const serviceAdapter = new GroqAdapter({
+  groq,
+  model: "llama3-groq-70b-8192-tool-use-preview",
 });
-
-const runtime = new CopilotRuntime();
 
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-    runtime,
-    serviceAdapter: llmAdapter,
-    endpoint: '/api/copilotkit',
+    runtime: copilotKit,
+    serviceAdapter,
+    endpoint: "/api/copilotkit",
   });
 
   return handleRequest(req);

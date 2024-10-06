@@ -30,7 +30,9 @@ https://github.com/user-attachments/assets/7406e7f2-f7bd-472a-90e4-2a82b5465efb
 
 - **Frontend**: Next.js 14, React, TypeScript
 - **Styling**: Tailwind CSS, Framer Motion for animations
-- **AI Integration**: Google's Generative AI (Gemini Pro model) and CopilotKit
+- **AI Integration**: 
+  - Google's Generative AI (Gemini Pro model) for study plan generation and resource curation
+  - Groq AI with CopilotKit for the intelligent chatbot assistant
 - **UI Components**: Radix UI, Shadcn UI
 - **State Management**: React Hooks
 - **API Routes**: Next.js API routes for backend functionality
@@ -49,9 +51,10 @@ https://github.com/user-attachments/assets/7406e7f2-f7bd-472a-90e4-2a82b5465efb
    ```
 
 3. Set up environment variables:
-   Create a `.env.local` file in the root directory and add your Google API key:
+   Create a `.env.local` file in the root directory and add your API keys:
    ```
    GOOGLE_API_KEY=your_google_api_key_here
+   GROQ_API_KEY=your_groq_api_key_here
    ```
 
 4. Run the development server:
@@ -91,6 +94,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) 
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Framer Motion](https://www.framer.com/motion/)
 - [Google Generative AI](https://ai.google.dev/)
+- [Groq AI](https://groq.com/)
 - [CopilotKit](https://docs.copilotkit.ai/)
 - [Radix UI](https://www.radix-ui.com/)
 - [Shadcn UI](https://ui.shadcn.com/)

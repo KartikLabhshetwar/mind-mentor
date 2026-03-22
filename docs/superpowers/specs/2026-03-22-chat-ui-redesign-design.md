@@ -5,7 +5,7 @@
 
 ## Overview
 
-Transform mind-mentor from a multi-page dashboard app with a separate Express backend into a single-page learning agent with a ChatGPT/Claude-style conversational UI. The Express backend is removed entirely; AI processing moves to Vercel AI SDK (latest stable, v4.x) server actions and route handlers. All existing features (PDF RAG, study plans, resource curation, timer, stats) are preserved but surfaced through the chat interface and slide-over panels.
+Transform mind-mentor from a multi-page dashboard app with a separate Express backend into a single-page learning agent with a ChatGPT/Claude-style conversational UI. The Express backend is removed entirely; AI processing moves to Vercel AI SDK v6 route handlers with `streamText` and `useChat`. All existing features (PDF RAG, study plans, resource curation, timer, stats) are preserved but surfaced through the chat interface and slide-over panels.
 
 ## 1. Layout & Navigation
 
@@ -35,11 +35,13 @@ Dropdown in sidebar header. Options: Groq (Llama 3.3, default), Claude (Sonnet),
 
 ## 2. AI Architecture
 
-### Vercel AI SDK (v4.x stable)
+### Vercel AI SDK v6
 
-- `useChat` from `ai/react` for client-side chat state and streaming
-- `streamText` from `ai` in API route handlers (`/api/chat`) for server-side streaming
-- Tools defined via `tool()` helper — return structured data (JSON), client renders appropriate React components based on tool call name
+- `useChat` from `@ai-sdk/react` with `DefaultChatTransport` for client-side streaming
+- `streamText` from `ai` in API route handler (`/api/chat/route.ts`)
+- Messages use `parts` array (text parts, tool parts) — not legacy `content` string
+- Tools defined via `tool()` helper with `inputSchema` (zod) — return structured JSON, client renders React components per tool name via `part.type === 'tool-<name>'`
+- `sendMessage({ text })` replaces legacy `handleSubmit`
 - Multi-provider via AI SDK provider registry:
   - `groq('llama-3.3-70b-versatile')` — default, free
   - `anthropic('claude-sonnet-4-20250514')` — premium

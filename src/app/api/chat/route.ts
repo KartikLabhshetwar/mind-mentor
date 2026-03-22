@@ -6,7 +6,7 @@ import { getModel, ModelId } from '@/lib/ai/providers';
 import { SYSTEM_PROMPT } from '@/lib/ai/system-prompt';
 import { connectMongoDB } from '@/lib/mongodb';
 import Conversation from '@/models/Conversation';
-import StudyStats from '@/models/StudyStats';
+import StudyStats from '@/models/studyStats';
 import PdfDocument from '@/models/PdfDocument';
 import { embedText, cosineSimilarity } from '@/lib/ai/embeddings';
 

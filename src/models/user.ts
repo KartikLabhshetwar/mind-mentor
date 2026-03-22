@@ -79,6 +79,7 @@ interface IUser {
       studyReminders: boolean;
     };
   };
+  preferredModel: string;
   stats: mongoose.Types.ObjectId;
 }
 
@@ -114,6 +115,11 @@ const userSchema = new mongoose.Schema<IUser>({
         default: true,
       },
     },
+  },
+  preferredModel: {
+    type: String,
+    default: 'groq',
+    enum: ['groq', 'anthropic', 'openai'],
   },
   stats: {
     type: mongoose.Schema.Types.ObjectId,

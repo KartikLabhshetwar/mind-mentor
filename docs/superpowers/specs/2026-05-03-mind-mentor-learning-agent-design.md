@@ -408,6 +408,8 @@ EXPRESS_BACKEND_URL = "https://mind-mentor-api.onrender.com"
 - GROQ_API_KEY
 - MEM0_API_KEY
 - RESEND_API_KEY
+- AGENT_SERVICE_SECRET
+- NEXTAUTH_SECRET
 
 ### Frontend (Vercel)
 - Add `NEXT_PUBLIC_AGENT_URL` pointing to CF Worker URL
@@ -461,8 +463,8 @@ const res = await fetch(`${AGENT_URL}/agents/tutor/chat`, {
 
 // CF Worker validates JWT
 import { jwtVerify } from "jose";
-const { payload } = await jwtVerify(token, secret);
-const userId = payload.sub; // extracted from verified token, never from request body
+const { payload } = await jwtVerify(token, new TextEncoder().encode(env.NEXTAUTH_SECRET));
+const userId = payload.id; // NextAuth stores user.id in token.id (custom claim, not sub)
 ```
 
 Key points:
@@ -577,15 +579,36 @@ For long sessions:
 
 ### Frontend SSE Client
 
-```typescript
-const eventSource = new EventSource(`${AGENT_URL}/agents/tutor/chat`, {
-  // Use fetch-based SSE for POST support
-});
+EventSource only supports GET. Use fetch + eventsource-parser for POST-based SSE:
 
-// Or use eventsource-parser with fetch:
-const response = await fetch(url, { method: "POST", ... });
-const reader = response.body.getReader();
-// Parse SSE events from stream
+```typescript
+import { createParser } from "eventsource-parser";
+
+async function streamChat(message: string, token: string, onChunk: (text: string) => void) {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_AGENT_URL}/agents/tutor/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message, context: { page: window.location.pathname } }),
+  });
+
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  const parser = createParser((event) => {
+    if (event.type === "event" && event.data) {
+      if (event.event === "done") return;
+      onChunk(event.data);
+    }
+  });
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parser.feed(decoder.decode(value));
+  }
+}
 ```
 
 ## Knowledge Graph: Scope Decision
@@ -612,10 +635,14 @@ Return JSON: { edges: [{ from: "topic_a", to: "topic_b", reason: "..." }] }
 
 ```
 mastery = weighted_avg(
-  sm2_easiness_normalized * 0.4,    // retention quality
-  review_count_normalized * 0.3,     // practice frequency  
-  days_since_last_review_decay * 0.3 // recency
+  sm2_easiness_normalized * 0.4,    // retention quality (easiness / 2.5 * 100)
+  review_count_normalized * 0.3,     // practice frequency (min(reviews, 10) / 10 * 100)
+  recency_score * 0.3               // exponential decay from last review
 )
+
+// Recency decay function:
+recency_score = 100 * exp(-0.1 * days_since_last_review)
+// Day 0 = 100, Day 7 = 50, Day 14 = 25, Day 30 ≈ 5
 ```
 
 ## Predicted Readiness Formula
@@ -664,6 +691,26 @@ app.post("/api/webhooks/resend", async (req, res) => {
 ### Webhook Setup
 - Register Resend webhook URL: `https://express-backend/api/webhooks/resend`
 - Events: `email.opened`, `email.clicked`
+- Verify webhook signature using Svix headers before processing:
+
+```typescript
+import { Webhook } from "svix";
+
+app.post("/api/webhooks/resend", async (req, res) => {
+  const wh = new Webhook(process.env.RESEND_WEBHOOK_SECRET);
+  try {
+    const payload = wh.verify(JSON.stringify(req.body), {
+      "svix-id": req.headers["svix-id"],
+      "svix-timestamp": req.headers["svix-timestamp"],
+      "svix-signature": req.headers["svix-signature"],
+    });
+    // Process verified event...
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid webhook signature" });
+  }
+});
+```
+
 - Fallback: if webhooks not configured, use time-based heuristic (no open within 48h = ignored)
 
 ## Express Route Naming Convention

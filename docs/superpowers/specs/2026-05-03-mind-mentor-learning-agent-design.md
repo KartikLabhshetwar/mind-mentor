@@ -395,7 +395,7 @@ mind-mentor-agents/
 ```toml
 name = "mind-mentor-agents"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2025-04-01"
 
 [triggers]
 crons = ["0 * * * *"]
@@ -422,6 +422,274 @@ wrangler deploy                 # production
 # Frontend
 git push                        # Vercel auto-deploy
 ```
+
+## Security & Authentication
+
+### Agent-to-Express Authentication
+
+CF Workers authenticate to Express using a shared service secret:
+
+```typescript
+// CF Worker → Express calls
+headers: {
+  "X-Agent-Secret": env.AGENT_SERVICE_SECRET,
+  "X-Agent-Name": "tutor" | "scheduler" | "analyst"
+}
+```
+
+Express middleware validates:
+```typescript
+function validateAgentAuth(req, res, next) {
+  const secret = req.headers["x-agent-secret"];
+  if (secret !== process.env.AGENT_SERVICE_SECRET) {
+    return res.status(401).json({ error: "Unauthorized agent call" });
+  }
+  next();
+}
+```
+
+### Frontend-to-Agent Authentication
+
+Frontend passes NextAuth JWT to CF Workers. Worker validates it:
+
+```typescript
+// Frontend chat call
+const res = await fetch(`${AGENT_URL}/agents/tutor/chat`, {
+  headers: { "Authorization": `Bearer ${session.token}` },
+  body: JSON.stringify({ message, context })
+});
+
+// CF Worker validates JWT
+import { jwtVerify } from "jose";
+const { payload } = await jwtVerify(token, secret);
+const userId = payload.sub; // extracted from verified token, never from request body
+```
+
+Key points:
+- userId is NEVER passed in request body from frontend
+- Worker extracts userId from verified JWT payload
+- NextAuth NEXTAUTH_SECRET shared with CF Worker as a secret
+- Add `NEXTAUTH_SECRET` to wrangler secrets
+
+### Secrets Summary
+
+| Secret | Used By | Purpose |
+|--------|---------|---------|
+| GROQ_API_KEY | CF Workers | LLM inference |
+| MEM0_API_KEY | CF Workers | Memory read/write |
+| RESEND_API_KEY | CF Workers | Email sending |
+| AGENT_SERVICE_SECRET | CF Workers + Express | Service-to-service auth |
+| NEXTAUTH_SECRET | CF Workers | JWT verification for user identity |
+
+## Framework Fallback Strategy
+
+### Primary: Flue Framework
+
+If Flue Framework installs and works on CF Workers as expected, use it for agent scaffolding.
+
+### Fallback: Vanilla CF Workers + Hono
+
+If Flue Framework is unavailable, unverified, or has blocking issues on Day 1:
+
+```typescript
+// Use Hono (lightweight CF Workers framework) as fallback
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { streamSSE } from "hono/streaming";
+
+const app = new Hono();
+
+app.post("/agents/tutor/chat", async (c) => {
+  // Agent logic here, same architecture, no Flue dependency
+  return streamSSE(c, async (stream) => {
+    // ... streaming response
+  });
+});
+
+export default app;
+```
+
+Decision criteria (Day 1):
+- Can `npm install flue` resolve? → If no, use Hono
+- Does `flue dev --target cloudflare` produce a working Worker? → If no, use Hono
+- Does Flue support SSE streaming? → If no, use Hono
+
+Hono is battle-tested on CF Workers, supports SSE, CORS, middleware. Same agent logic applies regardless of framework choice. Only the routing/scaffold layer changes.
+
+Updated wrangler.toml (fallback):
+```toml
+compatibility_date = "2025-04-01"
+```
+
+## SSE Streaming Design
+
+### CF Worker Streaming Implementation
+
+```typescript
+// Tutor agent streaming response
+app.post("/agents/tutor/chat", async (c) => {
+  return streamSSE(c, async (stream) => {
+    // Set CORS headers
+    stream.writeSSE({ event: "start", data: "" });
+    
+    // Stream from Groq
+    const completion = await groq.chat.completions.create({
+      model: "qwen/qwen3-32b",
+      messages: [...],
+      stream: true,
+    });
+    
+    for await (const chunk of completion) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      stream.writeSSE({ data: content });
+    }
+    
+    stream.writeSSE({ event: "done", data: "" });
+  });
+});
+```
+
+### CORS Configuration (CF Worker)
+
+```typescript
+app.use("*", cors({
+  origin: [
+    "https://mind-mentor-pearl.vercel.app",
+    "https://mind-mentor.kartiklabhshetwar.me",
+    "https://www.mind-mentor.ink",
+    "https://mind-mentor.ink",
+    "http://localhost:3000",
+  ],
+  allowHeaders: ["Content-Type", "Authorization"],
+  allowMethods: ["GET", "POST", "OPTIONS"],
+  credentials: true,
+}));
+```
+
+### CPU Time Limit Mitigation
+
+CF Workers have 30s CPU time limit (not wall-clock). Streaming is mostly I/O wait (not CPU), so typical chat sessions (< 60s wall-clock) stay well within limits.
+
+For long sessions:
+- Groq inference is fast (qwen3-32b on Groq = ~100 tokens/sec)
+- Max response capped at 2000 tokens (~20s of streaming)
+- If response exceeds 25s wall-clock, send `event: truncated` and offer continuation
+
+### Frontend SSE Client
+
+```typescript
+const eventSource = new EventSource(`${AGENT_URL}/agents/tutor/chat`, {
+  // Use fetch-based SSE for POST support
+});
+
+// Or use eventsource-parser with fetch:
+const response = await fetch(url, { method: "POST", ... });
+const reader = response.body.getReader();
+// Parse SSE events from stream
+```
+
+## Knowledge Graph: Scope Decision
+
+### For Demo/Presentation (Phase 2 target)
+
+Knowledge graph prerequisite edges are **LLM-inferred at study plan creation time**, not continuously auto-detected:
+
+1. When user creates a study plan → Analyst Agent extracts topics and infers prerequisites
+2. When user uploads a PDF → Analyst extracts key topics, links to existing graph
+3. Manual override: user can add/remove edges in the graph viewer
+
+This avoids expensive continuous inference while still producing an impressive, populated graph.
+
+### Topic Extraction Prompt (run once per study plan/PDF)
+
+```
+Given these study plan topics: [topics]
+Identify prerequisite relationships.
+Return JSON: { edges: [{ from: "topic_a", to: "topic_b", reason: "..." }] }
+```
+
+### Mastery Score Derivation
+
+```
+mastery = weighted_avg(
+  sm2_easiness_normalized * 0.4,    // retention quality
+  review_count_normalized * 0.3,     // practice frequency  
+  days_since_last_review_decay * 0.3 // recency
+)
+```
+
+## Predicted Readiness Formula
+
+```
+readiness(topic) = (
+  mastery_score * 0.5 +
+  days_until_next_review_factor * 0.3 +
+  recent_study_consistency * 0.2
+)
+
+// days_until_next_review_factor:
+//   1.0 if review is overdue (need to study now)
+//   0.5 if review is today
+//   0.0 if next review is far away (already fresh)
+
+// recent_study_consistency:
+//   streak_days / 7 (capped at 1.0)
+```
+
+## Email Tracking (Ignored Email Counter)
+
+### Implementation
+
+Use Resend webhooks for delivery + open tracking:
+
+```typescript
+// Express route for Resend webhooks
+app.post("/api/webhooks/resend", async (req, res) => {
+  const { type, data } = req.body;
+  
+  if (type === "email.opened" || type === "email.clicked") {
+    // Reset ignored counter
+    await ReminderPreferences.updateOne(
+      { email: data.to },
+      { $set: { consecutiveIgnored: 0 } }
+    );
+  }
+});
+
+// Scheduler Agent: after sending, increment counter
+// Counter resets on open/click via webhook
+// After 3 sends with no open → pause email, ask in chat
+```
+
+### Webhook Setup
+- Register Resend webhook URL: `https://express-backend/api/webhooks/resend`
+- Events: `email.opened`, `email.clicked`
+- Fallback: if webhooks not configured, use time-based heuristic (no open within 48h = ignored)
+
+## Express Route Naming Convention
+
+All new routes use `/api/` prefix for consistency. Existing routes (`/generate-plan`, `/curate-resources`, `/pdf`) remain unchanged to avoid breaking deployed frontend.
+
+```
+# Existing (unchanged)
+/generate-plan
+/curate-resources
+/pdf
+
+# New (all under /api/)
+/api/analytics/sessions/:userId
+/api/analytics/topics/:userId
+/api/reminders/preferences
+/api/reminders/preferences/:userId
+/api/chat/history/:userId
+/api/chat/history
+/api/topics/mastery
+/api/topics/mastery/:userId
+/api/webhooks/resend
+```
+
+Agent-facing routes protected by `validateAgentAuth` middleware.
+User-facing routes (chat history) protected by NextAuth session verification.
 
 ## Quality Requirements
 

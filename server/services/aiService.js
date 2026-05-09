@@ -1,21 +1,21 @@
-import Groq from 'groq-sdk';
-import StudyPlan from '../models/studyPlan.js';
-import NodeCache from 'node-cache';
-import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
-import fetch from 'node-fetch';
-import https from 'https';
+import Groq from "groq-sdk";
+import StudyPlan from "../models/studyPlan.js";
+import NodeCache from "node-cache";
+import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
+import fetch from "node-fetch";
+import https from "https";
 
 // Initialize dotenv
 dotenv.config();
 
 if (!process.env.GROQ_API_KEY) {
-  throw new Error('GROQ_API_KEY is not set in environment variables');
+  throw new Error("GROQ_API_KEY is not set in environment variables");
 }
 
 // Initialize Groq client with explicit API key
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
+  apiKey: process.env.GROQ_API_KEY,
 });
 
 // Initialize cache with 30 minutes TTL
@@ -25,21 +25,21 @@ const cache = new NodeCache({ stdTTL: 1800 });
 const aiRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after an hour',
+  message: "Too many requests from this IP, please try again after an hour",
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true
+  trustProxy: true,
 });
 
 // Create a custom HTTPS agent that doesn't reject unauthorized certificates
 const httpsAgent = new https.Agent({
-  rejectUnauthorized: false
+  rejectUnauthorized: false,
 });
 
 async function searchTavily(subject) {
   // Cache key for Tavily search
   const cacheKey = `tavily_${subject}`;
-  
+
   // Check cache first
   const cachedResult = cache.get(cacheKey);
   if (cachedResult) {
@@ -47,11 +47,11 @@ async function searchTavily(subject) {
   }
 
   try {
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.TAVILY_API_KEY}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
       },
       body: JSON.stringify({
         query: `best free learning resources tutorials courses guides documentation for learning ${subject}`,
@@ -71,13 +71,13 @@ async function searchTavily(subject) {
           "medium.com",
           "udemy.com",
           "udacity.com",
-        ]
+        ],
       }),
-      agent: httpsAgent // Use our custom HTTPS agent
+      agent: httpsAgent, // Use our custom HTTPS agent
     });
 
     if (!response.ok) {
-      throw new Error('Tavily search failed');
+      throw new Error("Tavily search failed");
     }
 
     const result = await response.json();
@@ -85,15 +85,15 @@ async function searchTavily(subject) {
     cache.set(cacheKey, result);
     return result;
   } catch (error) {
-    console.error('Tavily search error:', error);
-    return { results: [], answer: '' };
+    console.error("Tavily search error:", error);
+    return { results: [], answer: "" };
   }
 }
 
 async function curateResources(searchData, subject) {
   // Cache key for curated resources
   const cacheKey = `resources_${subject}`;
-  
+
   // Check cache first
   const cachedResult = cache.get(cacheKey);
   if (cachedResult) {
@@ -103,10 +103,10 @@ async function curateResources(searchData, subject) {
   try {
     // Reduce the search results to minimize token usage
     const limitedResults = searchData.results?.slice(0, 5) || [];
-    const summarizedContext = limitedResults.map(r => ({
+    const summarizedContext = limitedResults.map((r) => ({
       title: r.title,
       url: r.url,
-      description: r.description?.slice(0, 100) // Limit description length
+      description: r.description?.slice(0, 100), // Limit description length
     }));
 
     const completion = await groq.chat.completions.create({
@@ -118,7 +118,7 @@ async function curateResources(searchData, subject) {
           Your task is to analyze search results and create a curated list of the best free learning resources.
           Focus on reputable platforms, comprehensive tutorials, and well-structured courses.
           Always verify resources are freely accessible and relevant.
-          Respond in JSON format only.`
+          Respond in JSON format only.`,
         },
         {
           role: "user",
@@ -149,30 +149,35 @@ async function curateResources(searchData, subject) {
                 ]
               }
             ]
-          }`
-        }
+          }`,
+        },
       ],
       temperature: 0.7,
       max_tokens: 2000,
       top_p: 1,
       stream: false,
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
     });
 
     const result = JSON.parse(completion.choices[0]?.message?.content || "{}");
-    
+
     // Validate the result structure
-    if (!result.resources || !Array.isArray(result.resources) || result.resources.length === 0) {
-      throw new Error('Invalid resource format received from AI');
+    if (
+      !result.resources ||
+      !Array.isArray(result.resources) ||
+      result.resources.length === 0
+    ) {
+      throw new Error("Invalid resource format received from AI");
     }
 
     // Ensure each resource has all required fields
-    const validatedResources = result.resources.map(resource => ({
+    const validatedResources = result.resources.map((resource) => ({
       title: resource.title || `${subject} Learning Resource`,
-      url: resource.url || '#',
-      description: resource.description || `A curated resource for learning ${subject}`,
-      format: resource.format || 'website',
-      benefits: resource.benefits || [`Learn ${subject} effectively`]
+      url: resource.url || "#",
+      description:
+        resource.description || `A curated resource for learning ${subject}`,
+      format: resource.format || "website",
+      benefits: resource.benefits || [`Learn ${subject} effectively`],
     }));
 
     const finalResult = { resources: validatedResources };
@@ -181,15 +186,15 @@ async function curateResources(searchData, subject) {
     cache.set(cacheKey, finalResult);
     return finalResult;
   } catch (error) {
-    console.error('Groq error:', error);
+    console.error("Groq error:", error);
     // Check if it's a rate limit error
     if (error.status === 429 || error.status === 413) {
-      const retryAfter = error.headers?.['retry-after'] || 60;
+      const retryAfter = error.headers?.["retry-after"] || 60;
       throw {
         status: error.status,
-        error: 'Rate limit exceeded',
-        message: 'Too many requests. Please try again later.',
-        retryAfter
+        error: "Rate limit exceeded",
+        message: "Too many requests. Please try again later.",
+        retryAfter,
       };
     }
     throw error;
@@ -199,7 +204,7 @@ async function curateResources(searchData, subject) {
 async function generatePlan(subject, userId, examDate) {
   // Cache key for study plan
   const cacheKey = `plan_${subject}_${examDate}`;
-  
+
   // Check cache first
   const cachedResult = cache.get(cacheKey);
   if (cachedResult) {
@@ -208,7 +213,7 @@ async function generatePlan(subject, userId, examDate) {
 
   // Calculate days until exam
   const daysUntilExam = Math.ceil(
-    (new Date(examDate) - new Date()) / (1000 * 60 * 60 * 24)
+    (new Date(examDate) - new Date()) / (1000 * 60 * 60 * 24),
   );
 
   try {
@@ -217,7 +222,8 @@ async function generatePlan(subject, userId, examDate) {
       messages: [
         {
           role: "system",
-          content: "You are an expert study planner who creates detailed and effective study plans. Always respond in JSON format."
+          content:
+            "You are an expert study planner who creates detailed and effective study plans. Always respond in JSON format.",
         },
         {
           role: "user",
@@ -244,57 +250,63 @@ async function generatePlan(subject, userId, examDate) {
               }
             ],
             "recommendations": ["Tip 1", "Tip 2"]
-          }`
-        }
+          }`,
+        },
       ],
       temperature: 0.7,
       max_tokens: 2000,
       top_p: 1,
       stream: false,
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
     });
 
-    const parsedPlan = JSON.parse(completion.choices[0]?.message?.content || "{}");
-    
+    const parsedPlan = JSON.parse(
+      completion.choices[0]?.message?.content || "{}",
+    );
+
     // Validate the required fields
-    if (!parsedPlan.overview || !parsedPlan.weeklyPlans || !parsedPlan.recommendations) {
-      throw new Error('Missing required fields in plan structure');
+    if (
+      !parsedPlan.overview ||
+      !parsedPlan.weeklyPlans ||
+      !parsedPlan.recommendations
+    ) {
+      throw new Error("Missing required fields in plan structure");
     }
-    
+
     // Create a new StudyPlan instance
     const plan = new StudyPlan({
       userId,
       overview: {
         subject: parsedPlan.overview.subject,
         duration: parsedPlan.overview.duration,
-        examDate: parsedPlan.overview.examDate
+        examDate: parsedPlan.overview.examDate,
       },
-      weeklyPlans: parsedPlan.weeklyPlans.map(week => ({
+      weeklyPlans: parsedPlan.weeklyPlans.map((week) => ({
         week: week.week,
         goals: week.goals,
-        dailyTasks: week.dailyTasks.map(task => ({
+        dailyTasks: week.dailyTasks.map((task) => ({
           day: task.day,
-          tasks: task.tasks,
-          duration: task.duration
-        }))
+          tasks: task.tasks.map((text) => ({ text, completed: false })),
+          duration: task.duration,
+        })),
       })),
       recommendations: parsedPlan.recommendations,
       isActive: true,
       progress: 0,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     });
 
     cache.set(cacheKey, plan);
     return plan;
   } catch (error) {
-    console.error('Groq error:', error);
+    console.error("Groq error:", error);
     if (error.status === 429 || error.status === 413) {
-      const retryAfter = error.headers?.['retry-after'] || 60;
+      const retryAfter = error.headers?.["retry-after"] || 60;
       throw {
         status: error.status,
-        error: 'Rate limit exceeded',
-        message: 'Too many requests. Please try again later.',
-        retryAfter
+        error: "Rate limit exceeded",
+        message: "Too many requests. Please try again later.",
+        retryAfter,
       };
     }
     throw error;
@@ -302,4 +314,4 @@ async function generatePlan(subject, userId, examDate) {
 }
 
 // Export the functions and rate limiter
-export { aiRateLimiter, searchTavily, curateResources, generatePlan }; 
+export { aiRateLimiter, searchTavily, curateResources, generatePlan };

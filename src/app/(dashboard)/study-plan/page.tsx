@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react";
-import StudyPlanForm from '@/components/StudyPlanForm';
+import StudyPlanForm from "@/components/study-plan/StudyPlanForm";
 import { StoredPlan } from "@/components/study-plan/StoredPlan";
 import { Separator } from "@/components/ui/separator";
 import type { StudyPlan } from "@/components/study-plan/StoredPlan";

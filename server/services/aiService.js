@@ -36,6 +36,111 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 });
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+function parseDateOnly(dateString) {
+  const [year, month, day] = String(dateString).split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return new Date(dateString);
+  }
+
+  return new Date(year, month - 1, day);
+}
+
+function formatDateOnly(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function calculateDaysUntilExam(examDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const exam = parseDateOnly(examDate);
+  exam.setHours(0, 0, 0, 0);
+
+  return Math.max(1, Math.ceil((exam - today) / MS_PER_DAY));
+}
+
+function normalizeTaskText(task) {
+  if (typeof task === "string") {
+    return task;
+  }
+
+  if (task && typeof task === "object") {
+    const text = [task.text, task.task, task.label, task.name, task.title].find(
+      (candidate) => typeof candidate === "string" && candidate.trim(),
+    );
+
+    if (text) {
+      return text;
+    }
+  }
+
+  return "Review and practice the assigned topic";
+}
+
+function normalizeWeeklyPlans(weeklyPlans, expectedStudyDays) {
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+
+  const flattenedDailyTasks = weeklyPlans.flatMap((week, sourceWeekIndex) =>
+    (Array.isArray(week.dailyTasks) ? week.dailyTasks : []).map((day) => ({
+      sourceWeekIndex,
+      tasks: Array.isArray(day.tasks)
+        ? day.tasks.map((task) => ({
+            text: normalizeTaskText(task),
+            completed: false,
+          }))
+        : [],
+      duration: day.duration || "1-2 hours",
+    })),
+  );
+  const totalScheduledDays = Math.max(
+    flattenedDailyTasks.length,
+    expectedStudyDays,
+  );
+
+  return flattenedDailyTasks.reduce((weeks, dayTask, dayIndex) => {
+    const weekIndex = Math.floor(dayIndex / 7);
+    const scheduledDate = addDays(startDate, dayIndex);
+    const weekStartDate = addDays(startDate, weekIndex * 7);
+    const weekEndOffset = Math.min(weekIndex * 7 + 6, totalScheduledDays - 1);
+    const weekEndDate = addDays(startDate, weekEndOffset);
+
+    if (!weeks[weekIndex]) {
+      const sourceWeek =
+        weeklyPlans[weekIndex] || weeklyPlans[dayTask.sourceWeekIndex] || {};
+
+      weeks[weekIndex] = {
+        week: `Week ${weekIndex + 1} (${formatDateOnly(
+          weekStartDate,
+        )} to ${formatDateOnly(weekEndDate)})`,
+        goals: Array.isArray(sourceWeek.goals) ? sourceWeek.goals : [],
+        dailyTasks: [],
+      };
+    }
+
+    weeks[weekIndex].dailyTasks.push({
+      day: `${formatDateOnly(scheduledDate)} (Day ${dayIndex + 1})`,
+      tasks: dayTask.tasks,
+      duration: dayTask.duration,
+    });
+
+    return weeks;
+  }, []);
+}
+
 async function searchTavily(subject) {
   // Cache key for Tavily search
   const cacheKey = `tavily_${subject}`;
@@ -203,7 +308,7 @@ async function curateResources(searchData, subject) {
 
 async function generatePlan(subject, userId, examDate) {
   // Cache key for study plan
-  const cacheKey = `plan_${subject}_${examDate}`;
+  const cacheKey = `plan_${userId}_${subject}_${examDate}`;
 
   // Check cache first
   const cachedResult = cache.get(cacheKey);
@@ -212,9 +317,8 @@ async function generatePlan(subject, userId, examDate) {
   }
 
   // Calculate days until exam
-  const daysUntilExam = Math.ceil(
-    (new Date(examDate) - new Date()) / (1000 * 60 * 60 * 24),
-  );
+  const daysUntilExam = calculateDaysUntilExam(examDate);
+  const totalWeeks = Math.max(1, Math.ceil(daysUntilExam / 7));
 
   try {
     const completion = await groq.chat.completions.create({
@@ -228,6 +332,11 @@ async function generatePlan(subject, userId, examDate) {
         {
           role: "user",
           content: `Create a detailed study plan for ${subject} with ${daysUntilExam} days until the exam on ${examDate}.
+          Create exactly ${totalWeeks} weekly plan sections. Each week must contain only the dates that belong to that week:
+          - Week 1: days 1-7 from today
+          - Week 2: days 8-14 from today
+          - Continue this pattern until the exam date
+          Do not put all dates inside Week 1.
           
           Return the response in this exact JSON format:
           {
@@ -267,29 +376,30 @@ async function generatePlan(subject, userId, examDate) {
     // Validate the required fields
     if (
       !parsedPlan.overview ||
-      !parsedPlan.weeklyPlans ||
+      !Array.isArray(parsedPlan.weeklyPlans) ||
       !parsedPlan.recommendations
     ) {
       throw new Error("Missing required fields in plan structure");
+    }
+
+    const weeklyPlans = normalizeWeeklyPlans(
+      parsedPlan.weeklyPlans,
+      daysUntilExam,
+    );
+
+    if (weeklyPlans.length === 0) {
+      throw new Error("Study plan must include at least one daily task");
     }
 
     // Create a new StudyPlan instance
     const plan = new StudyPlan({
       userId,
       overview: {
-        subject: parsedPlan.overview.subject,
-        duration: parsedPlan.overview.duration,
-        examDate: parsedPlan.overview.examDate,
+        subject: parsedPlan.overview.subject || subject,
+        duration: `${daysUntilExam} days`,
+        examDate,
       },
-      weeklyPlans: parsedPlan.weeklyPlans.map((week) => ({
-        week: week.week,
-        goals: week.goals,
-        dailyTasks: week.dailyTasks.map((task) => ({
-          day: task.day,
-          tasks: task.tasks.map((text) => ({ text, completed: false })),
-          duration: task.duration,
-        })),
-      })),
+      weeklyPlans,
       recommendations: parsedPlan.recommendations,
       isActive: true,
       progress: 0,

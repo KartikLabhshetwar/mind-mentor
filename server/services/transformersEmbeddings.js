@@ -6,7 +6,7 @@ dotenv.config();
 // Configure environment for better performance
 env.allowLocalModels = false; // Use remote models for better performance
 env.allowRemoteModels = true;
-env.cacheDir = './models'; // Cache models locally
+env.cacheDir = './ai-models'; // Cache models locally
 
 class TransformersEmbeddings {
   constructor() {

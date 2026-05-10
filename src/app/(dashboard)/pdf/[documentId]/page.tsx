@@ -1,6 +1,6 @@
 'use client';
 
-import PdfChat from '@/components/PdfChat';
+import PdfChat from "@/components/pdf/PdfChat";
 import { useParams } from 'next/navigation';
 
 export default function PdfChatPage() {

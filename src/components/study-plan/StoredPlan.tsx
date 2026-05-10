@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Accordion,
   AccordionContent,
@@ -25,6 +26,11 @@ import { apiClient } from "@/lib/api-client";
 export interface TaskItem {
   text: string;
   completed?: boolean;
+  task?: string;
+  label?: string;
+  name?: string;
+  title?: string;
+  [key: string]: unknown;
 }
 
 export interface DailyTask {
@@ -59,36 +65,59 @@ interface StoredPlanProps {
   onDelete: (planId: string) => void;
 }
 
+const normalizeTask = (task: string | TaskItem): { text: string; completed: boolean } => {
+  if (typeof task === "string") {
+    return { text: task || "Untitled task", completed: false };
+  }
+
+  const textCandidates = [
+    task.text,
+    task.task,
+    task.label,
+    task.name,
+    task.title,
+  ];
+
+  const text =
+    textCandidates.find(
+      (candidate) => typeof candidate === "string" && candidate.trim(),
+    ) ||
+    Object.values(task).find(
+      (value) => typeof value === "string" && value.trim(),
+    ) ||
+    "Untitled task";
+
+  return { text: text as string, completed: task.completed ?? false };
+};
+
+const getTaskStats = (targetPlan: StudyPlan) => {
+  const tasks = targetPlan.weeklyPlans.flatMap((week) =>
+    week.dailyTasks.flatMap((day) => day.tasks.map(normalizeTask)),
+  );
+  const total = tasks.length;
+  const completed = tasks.filter((task) => task.completed).length;
+  const incomplete = total - completed;
+  const percentage =
+    total > 0 ? Math.round((completed / total) * 100) : targetPlan.progress;
+
+  return {
+    total,
+    completed,
+    incomplete,
+    percentage,
+  };
+};
+
 export function StoredPlan({ plan, onDelete }: StoredPlanProps) {
   const { toast } = useToast();
   const [currentPlan, setCurrentPlan] = useState<StudyPlan>(plan);
   const [isDeleting, setIsDeleting] = useState(false);
   const [updatingTask, setUpdatingTask] = useState(false);
 
-  const normalizeTask = (task: string | TaskItem) => {
-    if (typeof task === "string") {
-      return { text: task || "Untitled task", completed: false };
-    }
-
-    const textCandidates = [
-      task.text,
-      (task as any).task,
-      (task as any).label,
-      (task as any).name,
-      (task as any).title,
-    ];
-
-    const text =
-      textCandidates.find(
-        (candidate) => typeof candidate === "string" && candidate.trim(),
-      ) ||
-      Object.values(task).find(
-        (value) => typeof value === "string" && value.trim(),
-      ) ||
-      "Untitled task";
-
-    return { text, completed: task.completed ?? false };
-  };
+  const taskStats = useMemo(
+    () => getTaskStats(currentPlan),
+    [currentPlan],
+  );
 
   const handleTaskToggle = async (
     weekIndex: number,
@@ -114,26 +143,38 @@ export function StoredPlan({ plan, onDelete }: StoredPlanProps) {
         setCurrentPlan(response.plan);
       } else {
         setCurrentPlan((prevPlan) => {
-          const updated = { ...prevPlan };
-          const task =
-            updated.weeklyPlans[weekIndex].dailyTasks[dayIndex].tasks[
-              taskIndex
-            ];
-          if (typeof task === "string") {
-            updated.weeklyPlans[weekIndex].dailyTasks[dayIndex].tasks[
-              taskIndex
-            ] = {
-              text: task,
-              completed: isChecked,
-            };
-          } else {
-            updated.weeklyPlans[weekIndex].dailyTasks[dayIndex].tasks[
-              taskIndex
-            ] = {
-              ...task,
-              completed: isChecked,
-            };
-          }
+          const updated: StudyPlan = {
+            ...prevPlan,
+            weeklyPlans: prevPlan.weeklyPlans.map((week, currentWeekIndex) => ({
+              ...week,
+              dailyTasks: week.dailyTasks.map((day, currentDayIndex) => ({
+                ...day,
+                tasks:
+                  currentWeekIndex === weekIndex &&
+                  currentDayIndex === dayIndex
+                    ? day.tasks.map((task, currentTaskIndex) => {
+                        if (currentTaskIndex !== taskIndex) {
+                          return task;
+                        }
+
+                        if (typeof task === "string") {
+                          return {
+                            text: task,
+                            completed: isChecked,
+                          };
+                        }
+
+                        return {
+                          ...task,
+                          completed: isChecked,
+                        };
+                      })
+                    : day.tasks,
+              })),
+            })),
+          };
+          const stats = getTaskStats(updated);
+          updated.progress = stats.percentage;
           return updated;
         });
       }
@@ -237,6 +278,43 @@ export function StoredPlan({ plan, onDelete }: StoredPlanProps) {
       </CardHeader>
 
       <CardContent>
+        <div className="mb-6 rounded-md border border-border bg-muted/30 p-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Task Progress
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {taskStats.completed} of {taskStats.total} tasks completed
+              </p>
+            </div>
+            <Badge variant="outline" className="w-fit text-xs sm:text-sm">
+              {taskStats.percentage}%
+            </Badge>
+          </div>
+          <Progress value={taskStats.percentage} className="mb-4" />
+          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+            <div className="rounded-md border border-border bg-background p-3">
+              <p className="text-xs text-muted-foreground">Total Tasks</p>
+              <p className="text-lg font-semibold text-foreground">
+                {taskStats.total}
+              </p>
+            </div>
+            <div className="rounded-md border border-border bg-background p-3">
+              <p className="text-xs text-muted-foreground">Completed</p>
+              <p className="text-lg font-semibold text-foreground">
+                {taskStats.completed}
+              </p>
+            </div>
+            <div className="rounded-md border border-border bg-background p-3">
+              <p className="text-xs text-muted-foreground">Incomplete</p>
+              <p className="text-lg font-semibold text-foreground">
+                {taskStats.incomplete}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <Accordion type="single" collapsible className="w-full">
           {currentPlan.weeklyPlans.map((weekPlan, index) => (
             <AccordionItem key={index} value={`week-${index}`}>

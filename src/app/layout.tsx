@@ -3,10 +3,10 @@ import { Inter, Lexend } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { NextAuthProvider } from "@/providers/NextAuthProvider";
-import { PostHogProvider } from '@/components/posthog-provider';
+import { PostHogProvider } from "@/providers/posthog-provider";
 import dynamic from "next/dynamic";
 
-const PostHogPageView = dynamic(() => import('@/components/PostHogPageView'), { ssr: false });
+const PostHogPageView = dynamic(() => import("@/providers/PostHogPageView"), { ssr: false });
 
 const inter = Inter({
   subsets: ['latin'],

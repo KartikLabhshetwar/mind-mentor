@@ -1,10 +1,15 @@
-import React from 'react';
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+interface TaskItem {
+  text: string;
+  completed?: boolean;
+}
+
 interface DailyTask {
   day: string;
-  tasks: string[];
+  tasks: Array<string | TaskItem>;
   duration: string;
 }
 
@@ -28,6 +33,31 @@ interface StudyPlanDisplayProps {
   plan: StudyPlan;
 }
 
+const normalizeTask = (task: string | TaskItem) => {
+  if (typeof task === "string") {
+    return { text: task || "Untitled task", completed: false };
+  }
+
+  const textCandidates = [
+    task.text,
+    (task as any).task,
+    (task as any).label,
+    (task as any).name,
+    (task as any).title,
+  ];
+
+  const text =
+    textCandidates.find(
+      (candidate) => typeof candidate === "string" && candidate.trim(),
+    ) ||
+    Object.values(task).find(
+      (value) => typeof value === "string" && value.trim(),
+    ) ||
+    "Untitled task";
+
+  return { text, completed: task.completed ?? false };
+};
+
 export default function StudyPlanDisplay({ plan }: StudyPlanDisplayProps) {
   return (
     <Card className="w-full bg-white border-2 border-black rounded-xl">
@@ -48,27 +78,38 @@ export default function StudyPlanDisplay({ plan }: StudyPlanDisplayProps) {
               <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800 border-b pb-2">
                 {weeklyPlan.week}
               </h3>
-              
+
               <div className="mb-4">
-                <h4 className="font-medium text-gray-700 mb-2 text-sm sm:text-base">Goals:</h4>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm sm:text-base">
+                  Goals:
+                </h4>
                 <ul className="list-disc pl-4 sm:pl-5 space-y-1 text-sm sm:text-base">
                   {weeklyPlan.goals.map((goal, index) => (
-                    <li key={index} className="text-gray-600">{goal}</li>
+                    <li key={index} className="text-gray-600">
+                      {goal}
+                    </li>
                   ))}
                 </ul>
               </div>
 
               <div className="mb-4">
-                <h4 className="font-medium text-gray-700 mb-2 text-sm sm:text-base">Daily Schedule:</h4>
+                <h4 className="font-medium text-gray-700 mb-2 text-sm sm:text-base">
+                  Daily Schedule:
+                </h4>
                 {weeklyPlan.dailyTasks.map((day, dayIndex) => (
                   <div key={dayIndex} className="mb-3">
                     <h5 className="font-medium text-gray-600 text-sm sm:text-base">
                       {day.day} ({day.duration})
                     </h5>
                     <ul className="list-disc pl-4 sm:pl-5 space-y-1 text-sm sm:text-base">
-                      {day.tasks.map((task, taskIndex) => (
-                        <li key={taskIndex} className="text-gray-600">{task}</li>
-                      ))}
+                      {day.tasks.map((task, taskIndex) => {
+                        const normalized = normalizeTask(task);
+                        return (
+                          <li key={taskIndex} className="text-gray-600">
+                            {normalized.text}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 ))}
@@ -82,7 +123,9 @@ export default function StudyPlanDisplay({ plan }: StudyPlanDisplayProps) {
             </h3>
             <ul className="list-disc pl-4 sm:pl-5 space-y-2 text-sm sm:text-base">
               {plan.recommendations.map((tip, index) => (
-                <li key={index} className="text-gray-600">{tip}</li>
+                <li key={index} className="text-gray-600">
+                  {tip}
+                </li>
               ))}
             </ul>
           </div>

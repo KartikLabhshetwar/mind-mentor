@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react";
-import ResourceCurator from '@/components/ResourceCurator';
+import ResourceCurator from "@/components/resources/ResourceCurator";
 import { StoredResources } from "@/components/resources/StoredResources";
 import { Separator } from "@/components/ui/separator";
 import type { CuratedResource } from "@/components/resources/StoredResources";

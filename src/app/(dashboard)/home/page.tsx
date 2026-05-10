@@ -85,7 +85,7 @@ export default function DashboardHome() {
       if (!session?.user?.id) return;
       
       try {
-        const response = await fetch('/api/users/stats');
+        const response = await fetch('/api/user/stats');
         if (!response.ok) throw new Error('Failed to fetch study data');
         
         const data: SessionData = await response.json();

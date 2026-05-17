@@ -6,8 +6,8 @@ import { FeaturesGrid } from '@/components/sections/FeatureGrid'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import SocialWall from "@/components/SocialWall"
-import { Video } from "@/components/Video"
+import SocialWall from "@/components/sections/SocialWall"
+import { Video } from "@/components/sections/Video"
 import { FaqSection } from "@/components/sections/FaqSection"
 
 export default function Page() {

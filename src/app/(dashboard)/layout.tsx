@@ -1,6 +1,7 @@
 "use client"
 
 import { DashboardNav } from "@/components/dashboard/DashboardNav"
+import { ChatWidget } from "@/components/chat/ChatWidget"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -43,6 +44,7 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
+      <ChatWidget />
     </div>
   )
 }

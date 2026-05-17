@@ -1,0 +1,135 @@
+<h2>Unified Dashboard Layout</h2>
+<p class="subtitle">ChatGPT-inspired dark mode. Which layout structure works best for Mind Mentor?</p>
+
+<div class="cards">
+  <!-- Option A: Classic ChatGPT -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #202123; padding: 16px; min-height: 280px;">
+      <div style="display: flex; height: 260px;">
+        <!-- Sidebar -->
+        <div style="width: 70px; background: #171717; border-radius: 8px; padding: 8px; margin-right: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="width: 36px; height: 36px; background: #2d2d30; border-radius: 50%; margin: 0 auto;"></div>
+          <div style="height: 1px; background: #444; margin: 4px 0;"></div>
+          <div style="width: 100%; height: 24px; background: #2d2d30; border-radius: 4px;"></div>
+          <div style="width: 100%; height: 24px; background: #2d2d30; border-radius: 4px;"></div>
+          <div style="width: 100%; height: 24px; background: #2d2d30; border-radius: 4px;"></div>
+          <div style="flex: 1;"></div>
+          <div style="width: 100%; height: 24px; background: #2d2d30; border-radius: 4px;"></div>
+        </div>
+        <!-- Main chat area -->
+        <div style="flex: 1; display: flex; flex-direction: column;">
+          <!-- Messages -->
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
+            <div style="align-self: flex-end; background: #2d2d30; padding: 8px 12px; border-radius: 12px; max-width: 70%; font-size: 10px; color: #ccc;">Find me calculus resources</div>
+            <div style="align-self: flex-start; background: #343541; padding: 8px 12px; border-radius: 12px; max-width: 80%; font-size: 10px; color: #ccc;">Here are curated resources for calculus...</div>
+            <div style="align-self: flex-start; background: #343541; padding: 8px 12px; border-radius: 12px; max-width: 80%;">
+              <div style="display: flex; gap: 6px;">
+                <div style="width: 60px; height: 40px; background: #4a4a50; border-radius: 4px;"></div>
+                <div style="width: 60px; height: 40px; background: #4a4a50; border-radius: 4px;"></div>
+                <div style="width: 60px; height: 40px; background: #4a4a50; border-radius: 4px;"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Input area -->
+          <div style="margin-top: 12px; background: #40414f; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 8px;">
+            <div style="width: 20px; height: 20px; background: #666; border-radius: 50%;"></div>
+            <div style="flex: 1; height: 14px; background: #555; border-radius: 4px;"></div>
+            <div style="width: 20px; height: 20px; background: #10a37f; border-radius: 50%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A: Classic ChatGPT</h3>
+      <p>Thin sidebar for chat history. Full-width chat. Tools triggered via slash commands or AI detection. Sidebar shows past conversations.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Chat + Context Panel -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #202123; padding: 16px; min-height: 280px;">
+      <div style="display: flex; height: 260px;">
+        <!-- Sidebar -->
+        <div style="width: 60px; background: #171717; border-radius: 8px; padding: 8px; margin-right: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="width: 32px; height: 32px; background: #2d2d30; border-radius: 50%; margin: 0 auto;"></div>
+          <div style="width: 100%; height: 20px; background: #2d2d30; border-radius: 4px;"></div>
+          <div style="width: 100%; height: 20px; background: #2d2d30; border-radius: 4px;"></div>
+          <div style="width: 100%; height: 20px; background: #2d2d30; border-radius: 4px;"></div>
+        </div>
+        <!-- Chat area -->
+        <div style="flex: 1; display: flex; flex-direction: column; margin-right: 8px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div style="align-self: flex-end; background: #2d2d30; padding: 6px 10px; border-radius: 10px; max-width: 70%; font-size: 9px; color: #ccc;">Quiz me on derivatives</div>
+            <div style="align-self: flex-start; background: #343541; padding: 6px 10px; border-radius: 10px; max-width: 80%; font-size: 9px; color: #ccc;">Q1: What is d/dx of sin(x)?</div>
+          </div>
+          <div style="margin-top: 8px; background: #40414f; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 6px;">
+            <div style="flex: 1; height: 12px; background: #555; border-radius: 4px;"></div>
+            <div style="width: 16px; height: 16px; background: #10a37f; border-radius: 50%;"></div>
+          </div>
+        </div>
+        <!-- Right panel -->
+        <div style="width: 100px; background: #2d2d30; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 8px; color: #888; text-transform: uppercase;">Score</div>
+          <div style="height: 30px; background: #10a37f33; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #10a37f; font-weight: bold;">78%</div>
+          <div style="font-size: 8px; color: #888; text-transform: uppercase; margin-top: 6px;">Weak Topics</div>
+          <div style="height: 12px; background: #444; border-radius: 2px;"></div>
+          <div style="height: 12px; background: #444; border-radius: 2px;"></div>
+          <div style="font-size: 8px; color: #888; text-transform: uppercase; margin-top: 6px;">Resources</div>
+          <div style="height: 12px; background: #444; border-radius: 2px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B: Chat + Context Panel</h3>
+      <p>Main chat center. Collapsible right panel shows scores, weak topics, active resources, study plan progress. Context always visible.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Full-width immersive -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background: #202123; padding: 16px; min-height: 280px;">
+      <div style="display: flex; flex-direction: column; height: 260px;">
+        <!-- Top bar -->
+        <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid #333;">
+          <div style="width: 28px; height: 28px; background: #10a37f; border-radius: 6px;"></div>
+          <div style="font-size: 11px; color: #eee; font-weight: 600;">Mind Mentor</div>
+          <div style="flex: 1;"></div>
+          <div style="display: flex; gap: 6px;">
+            <div style="padding: 3px 8px; background: #2d2d30; border-radius: 4px; font-size: 8px; color: #888;">History</div>
+            <div style="padding: 3px 8px; background: #2d2d30; border-radius: 4px; font-size: 8px; color: #888;">Score: 78%</div>
+            <div style="width: 24px; height: 24px; background: #2d2d30; border-radius: 50%;"></div>
+          </div>
+        </div>
+        <!-- Chat (full width) -->
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; padding: 12px 40px;">
+          <div style="align-self: flex-end; background: #2d2d30; padding: 8px 14px; border-radius: 14px; font-size: 10px; color: #ccc;">Create a study plan for Linear Algebra</div>
+          <div style="align-self: flex-start; background: #343541; padding: 10px 14px; border-radius: 14px; max-width: 85%; font-size: 10px; color: #ccc;">
+            Here's your 4-week study plan...<br>
+            <div style="margin-top: 6px; display: flex; gap: 4px;">
+              <div style="padding: 3px 6px; background: #10a37f33; border-radius: 4px; font-size: 8px; color: #10a37f;">Week 1: Vectors</div>
+              <div style="padding: 3px 6px; background: #4a4a50; border-radius: 4px; font-size: 8px; color: #888;">Week 2: Matrices</div>
+            </div>
+          </div>
+        </div>
+        <!-- Input with tool buttons -->
+        <div style="padding: 0 40px;">
+          <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+            <div style="padding: 3px 8px; background: #2d2d30; border-radius: 12px; font-size: 8px; color: #aaa;">📎 PDF</div>
+            <div style="padding: 3px 8px; background: #2d2d30; border-radius: 12px; font-size: 8px; color: #aaa;">📝 Quiz</div>
+            <div style="padding: 3px 8px; background: #2d2d30; border-radius: 12px; font-size: 8px; color: #aaa;">📚 Resources</div>
+            <div style="padding: 3px 8px; background: #2d2d30; border-radius: 12px; font-size: 8px; color: #aaa;">📊 Plan</div>
+          </div>
+          <div style="background: #40414f; border-radius: 14px; padding: 12px 16px; display: flex; align-items: center; gap: 8px;">
+            <div style="width: 22px; height: 22px; background: #555; border-radius: 50%;"></div>
+            <div style="flex: 1; height: 14px; background: #555; border-radius: 4px;"></div>
+            <div style="width: 26px; height: 26px; background: #10a37f; border-radius: 50%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C: Full-Width Immersive</h3>
+      <p>No sidebar. Minimal top bar with score badge and history toggle. Full-width chat. Tool chips above input for discoverability. Maximum focus on conversation.</p>
+    </div>
+  </div>
+</div>

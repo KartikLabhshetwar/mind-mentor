@@ -32,5 +32,9 @@ export const config = {
     "/analytics",
     "/settings",
     "/profile",
+    "/chat",
+    "/insights",
+    "/insights/knowledge-graph",
+    "/settings/reminders",
   ],
 }; 

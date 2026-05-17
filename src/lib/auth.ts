@@ -3,13 +3,15 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { connectMongoDB } from "@/lib/mongodb";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";
+import { SignJWT } from "jose";
 
 // Extend the built-in session types
 declare module "next-auth" {
   interface Session {
     user: DefaultSession["user"] & {
       id: string;
-    }
+    };
+    token?: string;
   }
 }
 
@@ -70,6 +72,12 @@ export const authOptions: AuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
       }
+      // Create a JWT for agent API calls
+      const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+      session.token = await new SignJWT({ id: token.id })
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime("30d")
+        .sign(secret);
       return session;
     },
   },

@@ -1,0 +1,54 @@
+<h2>Right Context Panel — What Shows Here?</h2>
+<p class="subtitle">This panel sits beside the chat. What information is most useful during study sessions?</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="score" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Performance Score</h3>
+      <p>Overall mastery %, per-topic scores, recent quiz results. Visual progress bars. Shows improvement trend.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="weak" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Weak Topics Alert</h3>
+      <p>Topics where score is below threshold. Spaced repetition due items. "Review needed" badges with days since last practice.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="plan" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Active Study Plan</h3>
+      <p>Current plan progress. Today's tasks checklist. Upcoming milestones. Deadline countdown.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="resources" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>Pinned Resources</h3>
+      <p>Recently curated resources, uploaded PDFs, bookmarked links. Quick-access to study materials mentioned in chat.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="memory" onclick="toggleSelect(this)">
+    <div class="letter">5</div>
+    <div class="content">
+      <h3>AI Memory / Context</h3>
+      <p>What the AI remembers about you: learning style, past struggles, preferences. Visible so user trusts the personalization. Editable.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="streak" onclick="toggleSelect(this)">
+    <div class="letter">6</div>
+    <div class="content">
+      <h3>Study Streak & Stats</h3>
+      <p>Daily streak, total study time, questions answered today. Gamification elements. Contribution calendar.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 16px;">Multi-select: pick all that belong in the panel. Panel will use tabs/sections to organize them.</p>

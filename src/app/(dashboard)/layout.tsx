@@ -3,6 +3,7 @@
 import { DashboardNav } from "@/components/dashboard/DashboardNav"
 import { ChatWidget } from "@/components/chat/ChatWidget"
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
 export default function DashboardLayout({
@@ -10,7 +11,12 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+
+  if (pathname === "/dashboard") {
+    return <>{children}</>
+  }
 
   return (
     <div className="min-h-screen">

@@ -86,6 +86,43 @@
     --input: var(--color-navy-800);
     --ring: var(--color-aqua-500);
   }
+
+  .unified-dark {
+    /* Custom tokens used by unified dashboard components */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #202123;
+    --bg-sidebar: #171717;
+    --bg-surface: #2d2d30;
+    --bg-surface-hover: #3d3d40;
+    --accent: #10a37f;
+    --accent-muted: rgba(16, 163, 127, 0.2);
+    --text-primary: #ececec;
+    --text-secondary: #9a9a9a;
+    --text-muted: #666666;
+    --border-color: #333333;
+    --input-bg: #40414f;
+    --error: #ef4444;
+    --warning: #f59e0b;
+
+    /* Override shadcn/radix tokens (HSL format without hsl() wrapper) */
+    --background: 220 13% 10%;
+    --foreground: 0 0% 93%;
+    --card: 220 7% 18%;
+    --card-foreground: 0 0% 93%;
+    --popover: 220 7% 18%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 160 82% 35%;
+    --primary-foreground: 220 13% 10%;
+    --secondary: 220 7% 18%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 220 7% 22%;
+    --muted-foreground: 0 0% 60%;
+    --shadcn-accent: 220 7% 22%;
+    --accent-foreground: 0 0% 93%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 160 82% 35%;
+  }
 }
 
 /* Base styles */

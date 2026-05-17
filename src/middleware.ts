@@ -26,6 +26,7 @@ export const config = {
     "/register",
     "/signin",
     "/home",
+    "/dashboard",
     "/study-plan",
     "/resources",
     "/timer",

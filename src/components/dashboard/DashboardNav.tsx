@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Brain, FileText, Home, Timer, Users, LogOut, PanelLeftClose, PanelLeft, FileUp, MessageSquare, BarChart3, Settings } from "lucide-react"
+import { BookOpen, Brain, FileText, Home, Timer, Users, LogOut, PanelLeftClose, PanelLeft, FileUp, MessageSquare, BarChart3, Settings, Sparkles } from "lucide-react"
 import { signOut, useSession } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState } from "react"
@@ -53,8 +53,14 @@ export function DashboardNav({ className, onCollapse, ...props }: DashboardNavPr
       ]
     },
     {
-      title: "Study Tools", 
+      title: "Study Tools",
       items: [
+        {
+          label: 'AI Tutor',
+          icon: Sparkles,
+          href: '/dashboard',
+          badge: 'New',
+        },
         {
           label: 'Planner',
           icon: BookOpen,

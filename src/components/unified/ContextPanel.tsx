@@ -83,7 +83,12 @@ export function ContextPanel({ onTriggerCommand, token }: ContextPanelProps) {
               for (const day of week.dailyTasks) {
                 if (day.tasks) {
                   for (const task of day.tasks) {
-                    tasks.push({ title: task, completed: false });
+                    if (typeof task === "string") {
+                      tasks.push({ title: task, completed: false });
+                    } else if (task && typeof task === "object") {
+                      const text = task.text || task.task || task.label || task.name || task.title || "Task";
+                      tasks.push({ title: String(text), completed: task.completed ?? false });
+                    }
                   }
                 }
               }

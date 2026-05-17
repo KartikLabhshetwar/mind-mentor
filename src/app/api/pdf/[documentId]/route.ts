@@ -36,14 +36,17 @@ export async function GET(
       throw new Error(data.error || 'Failed to fetch PDF');
     }
 
-    // Get the PDF data as an array buffer
-    const pdfBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || '';
 
-    // Return the PDF with proper headers
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      return NextResponse.json(data);
+    }
+
+    const pdfBuffer = await response.arrayBuffer();
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'inline',
         'Content-Length': pdfBuffer.byteLength.toString(),
       },
     });

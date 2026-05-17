@@ -1,10 +1,23 @@
 import { createParser } from "eventsource-parser";
 
+export interface ChatContext {
+  page?: string;
+  subject?: string;
+  command?: string;
+  topic?: string;
+  pdfId?: string;
+}
+
+export interface ChatEvent {
+  type: "text" | "quiz" | "resources" | "plan";
+  data: string;
+}
+
 export async function streamChat(
   message: string,
   token: string,
-  context: { page?: string; subject?: string },
-  onChunk: (text: string) => void,
+  context: ChatContext,
+  onEvent: (event: ChatEvent) => void,
   onDone: () => void,
   onError: (error: string) => void
 ) {
@@ -36,8 +49,12 @@ export async function streamChat(
           onError(event.data);
           return;
         }
-        if (event.data) {
-          onChunk(event.data);
+
+        const eventType = (event.event || "text") as ChatEvent["type"];
+        if (["text", "quiz", "resources", "plan"].includes(eventType)) {
+          onEvent({ type: eventType, data: event.data });
+        } else {
+          onEvent({ type: "text", data: event.data });
         }
       }
     });

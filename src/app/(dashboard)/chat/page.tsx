@@ -29,13 +29,15 @@ export default function ChatPage() {
       message,
       session.token,
       { page: "/chat" },
-      (chunk) => {
-        assistantMessage += chunk;
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: assistantMessage };
-          return updated;
-        });
+      (event) => {
+        if (event.type === "text") {
+          assistantMessage += event.data;
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: assistantMessage };
+            return updated;
+          });
+        }
       },
       () => setIsStreaming(false),
       () => setIsStreaming(false)

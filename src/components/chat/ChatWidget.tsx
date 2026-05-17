@@ -32,13 +32,15 @@ export function ChatWidget() {
       message,
       session.token,
       { page: pathname },
-      (chunk) => {
-        assistantMessage += chunk;
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: assistantMessage };
-          return updated;
-        });
+      (event) => {
+        if (event.type === "text") {
+          assistantMessage += event.data;
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: assistantMessage };
+            return updated;
+          });
+        }
       },
       () => setIsStreaming(false),
       (error) => {

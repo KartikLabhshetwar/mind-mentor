@@ -7,8 +7,8 @@ export function createMem0Client(env: Env) {
 
 export async function getUserMemories(client: MemoryClient, userId: string, query: string) {
   try {
-    const results = await client.search(query, { user_id: userId });
-    return results;
+    const response = await client.search(query, { user_id: userId });
+    return (response as any).results || response || [];
   } catch (error) {
     console.error("mem0 search error:", error);
     return [];

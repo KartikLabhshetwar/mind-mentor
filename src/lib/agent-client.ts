@@ -94,7 +94,8 @@ export async function fetchMemories(token: string): Promise<{ id: string; text: 
     });
     if (!res.ok) return [];
     const data = await res.json();
-    const memories = data.memories || [];
+    const raw = data.memories || [];
+    const memories = Array.isArray(raw) ? raw : raw.results || [];
     return memories.map((m: { id?: string; memory?: string; content?: string }, i: number) => ({
       id: m.id || String(i),
       text: m.memory || m.content || "",

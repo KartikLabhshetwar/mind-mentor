@@ -147,7 +147,6 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
       if (!response.ok) throw new Error('Failed to fetch PDF');
 
       const contentType = response.headers.get('content-type') || '';
-      let pdfDataUri: string;
       let title = 'Document';
 
       let pdfResult: string | Uint8Array;

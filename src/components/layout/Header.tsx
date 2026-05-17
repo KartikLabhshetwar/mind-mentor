@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
+import { MindMentorLogo } from "@/components/ui/MindMentorLogo"
 
 export function Header() {
   const { data: session } = useSession()
@@ -58,9 +59,7 @@ export function Header() {
               href={session ? "/home" : "/"}
               className="flex items-center gap-2"
             >
-              <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#c1ff72] rounded-sm flex items-center justify-center border-2 border-b-3 border-r-3 border-black">
-                <span className="text-black text-base sm:text-xl">🎓</span>
-              </div>
+              <MindMentorLogo size={32} />
               <span className="font-semibold text-sm sm:text-base">Mind Mentor</span>
             </Link>
           </div>

@@ -177,39 +177,43 @@ export default function PdfChat({ documentId }: PdfChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-muted/10">
-      {/* Mobile View Selector */}
-      <div className="lg:hidden flex items-center justify-center gap-2 p-2 bg-background border-b">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-[var(--color-cream-700)]/50">
+      <div className="lg:hidden flex items-center justify-center gap-2 p-2.5 bg-white/50 backdrop-blur-sm border-b border-[var(--color-aqua-300)]/60">
         <Button
-          variant={activeView === 'pdf' ? 'default' : 'outline'}
+          variant={activeView === 'pdf' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => setActiveView('pdf')}
-          className="flex-1 max-w-[160px]"
+          className={cn(
+            "flex-1 max-w-[160px] rounded-lg transition-all",
+            activeView === 'pdf' && "bg-[var(--color-navy-900)] text-white shadow-sm"
+          )}
         >
           <FileText className="h-4 w-4 mr-2" />
           Document
         </Button>
         <Button
-          variant={activeView === 'chat' ? 'default' : 'outline'}
+          variant={activeView === 'chat' ? 'default' : 'ghost'}
           size="sm"
           onClick={() => setActiveView('chat')}
-          className="flex-1 max-w-[160px]"
+          className={cn(
+            "flex-1 max-w-[160px] rounded-lg transition-all",
+            activeView === 'chat' && "bg-[var(--color-navy-900)] text-white shadow-sm"
+          )}
         >
           <MessageSquare className="h-4 w-4 mr-2" />
           Chat
         </Button>
       </div>
 
-      {/* Content Area */}
-      <div className="flex flex-1 lg:gap-4 lg:p-4 overflow-hidden">
+      <div className="flex flex-1 lg:gap-3 lg:p-3 overflow-hidden">
         <div className={cn(
-          "lg:w-[55%] w-full transition-all duration-300",
+          "lg:w-[57%] w-full transition-all duration-300",
           activeView === 'pdf' ? 'block' : 'hidden lg:block'
         )}>
           {memoizedPdfViewer}
         </div>
         <div className={cn(
-          "lg:w-[45%] w-full transition-all duration-300",
+          "lg:w-[43%] w-full transition-all duration-300",
           activeView === 'chat' ? 'block' : 'hidden lg:block'
         )}>
           <ChatInterface
@@ -219,8 +223,6 @@ export default function PdfChat({ documentId }: PdfChatProps) {
           />
         </div>
       </div>
-
-      
     </div>
   );
 } 

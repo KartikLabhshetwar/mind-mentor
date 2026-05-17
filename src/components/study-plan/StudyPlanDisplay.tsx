@@ -38,12 +38,14 @@ const normalizeTask = (task: string | TaskItem) => {
     return { text: task || "Untitled task", completed: false };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = task as any;
   const textCandidates = [
     task.text,
-    (task as any).task,
-    (task as any).label,
-    (task as any).name,
-    (task as any).title,
+    t.task,
+    t.label,
+    t.name,
+    t.title,
   ];
 
   const text =

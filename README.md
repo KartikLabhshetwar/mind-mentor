@@ -1,210 +1,197 @@
-# Mind Mentor: AI-Powered Study Assistant 
+# Mind Mentor
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#key-features)
-- [Tech Stack](#tech-stack)
-- [Installation](#installation)
-- [API Integration](#api-integration)
-- [Usage Guide](#usage-guide)
-- [Contributing](#contributing)
-- [License](#license)
+AI-powered study assistant with multi-agent architecture. Combines personalized tutoring, spaced repetition, PDF analysis, and learning analytics into one platform.
 
 ## Demo
 
-
-
 https://github.com/user-attachments/assets/1ea26947-1dca-408d-9741-b24c3429944a
 
+## Architecture
 
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Next.js Frontend                        │
+│              (App Router, TypeScript, Tailwind, Shadcn)         │
+│                                                                 │
+│  Dashboard  │  PDF Chat  │  Insights  │  Timer  │  Study Plan   │
+└──────┬──────────────┬──────────────┬────────────────────────────┘
+       │              │              │
+       │  NextAuth JWT│              │  User JWT
+       ▼              ▼              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Cloudflare Workers (Hono)                       │
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐            │
+│  │   Tutor     │  │  Analyst    │  │  Scheduler   │            │
+│  │  Chat + SSE │  │  Insights   │  │  Email Cron  │            │
+│  │  Mem0 memory│  │  SM-2 algo  │  │  Resend API  │            │
+│  │  Groq LLM   │  │  Knowledge  │  │  Hourly runs │            │
+│  │             │  │  Graph      │  │              │            │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬───────┘            │
+└─────────┼────────────────┼────────────────┼────────────────────┘
+          │  Agent Secret  │                │
+          ▼                ▼                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Express Backend (:8000)                       │
+│                                                                 │
+│  Routes: /pdf, /generate-plan, /curate-resources, /api/quiz,    │
+│          /api/topics/mastery, /api/reminders, /api/analytics     │
+│                                                                 │
+│  Services: PDF RAG (LangChain), Groq LLM, Tavily Search,       │
+│            HuggingFace Embeddings                               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐       ┌──────────┐
+                    │   MongoDB    │       │   Mem0   │
+                    │  (Mongoose)  │       │ (Memory) │
+                    └──────────────┘       └──────────┘
+```
 
-## Overview
+### Three-Agent System
 
-Mind Mentor is an intelligent study companion that leverages AI to transform the learning experience. It combines personalized study planning, resource curation, and interactive assistance to help students achieve their academic goals efficiently.
+| Agent | Purpose | Model |
+|-------|---------|-------|
+| **Tutor** | Conversational AI tutor with persistent memory. Streams responses via SSE, handles `/resources` commands, extracts topics after each exchange | `qwen/qwen3-32b` (Groq) |
+| **Analyst** | Learning analytics engine. Runs SM-2 spaced repetition, builds knowledge graphs, detects study patterns, generates recommendations | `qwen/qwen3-32b` (Groq) |
+| **Scheduler** | Email reminder system. Hourly cron sends daily reminders, streak warnings, spaced repetition alerts, weekly digests, milestone emails | Resend API |
 
-## Key Features
+### Auth Flow
 
-### 1. AI-Powered Study Planning 📚
-- **Dynamic Plan Generation**
-  - Subject-based customization
-  - Exam date optimization
-  - Weekly learning milestones
-  - Daily task breakdown
-- **Progress Tracking**
-  - Visual progress indicators
-  - Completion status
-  - Adjustable schedules
-  - Performance analytics
+```
+Frontend → Agents:    Authorization: Bearer <NextAuth JWT>
+Agents → Express:     X-Agent-Secret: <shared secret>
+Frontend → Express:   Authorization: Bearer <NextAuth JWT>  (user-facing routes)
+```
 
-### 2. Smart Resource Curation 🔍
-- **AI-Driven Content Discovery**
-  - Tavily API integration for relevant search
-  - Quality scoring algorithm
-  - Content type diversity
-- **Resource Types Support**
-  - Video tutorials
-  - Online courses
-  - Documentation
-  - Practice exercises
-  - Academic papers
-- **Smart Filtering**
-  - Difficulty level categorization
-  - Format-based organization
-  - Topic relevance ranking
+## Features
 
-### 3. Interactive PDF Chat Assistant 📄
-- **Document Analysis**
-  - Upload and process PDF documents
-  - AI-powered document comprehension
-  - Contextual question answering
-- **Smart Features**
-  - Source page references
-  - Relevant excerpt highlighting
-  - Chat history persistence
-  - Context-aware responses
-- **PDF Viewer Integration**
-  - Page navigation and tracking
-  - Zoom and rotation controls
-  - Fullscreen mode
-  - Synchronized chat and document view
-
-### 4. User Experience 🎯
-- **Modern Interface**
-  - Clean, responsive design
-  - Toast notifications
-  - Loading states
-- **Navigation Features**
-  - Pagination system
+- **AI Tutor** — Chat with persistent memory (Mem0), slash commands, quiz generation
+- **PDF Chat (Scriba)** — Upload PDFs, ask questions with RAG-powered answers and source citations
+- **Learning Insights** — Mastery radar, study heatmap, velocity charts, weak spot detection, knowledge graph
+- **Study Plans** — AI-generated exam-targeted plans with weekly milestones
+- **Resource Curation** — Tavily-powered search filtered to educational content
+- **Spaced Repetition** — SM-2 algorithm tracks topic mastery and schedules reviews
+- **Pomodoro Timer** — Study timer with session tracking and streak stats
+- **Email Reminders** — Configurable daily/weekly reminders via Resend
+- **Notes** — Create and organize study notes
 
 ## Tech Stack
 
-### Frontend
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Styling**: 
-  - Tailwind CSS for utility-first styling
-  - Shadcn UI for component library
-- **State Management**: 
-  - Zustand for global state
-  - React Query for server state
-- **Authentication**: NextAuth.js with JWT
-- **PDF Processing**:
-  - React-PDF for document viewing
-  - PDF.js for text extraction
-  - Custom chat interface
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 14, TypeScript, Tailwind CSS, Shadcn UI, Zustand |
+| Auth | NextAuth.js (credentials + JWT) |
+| Agents | Cloudflare Workers, Hono, Wrangler |
+| Backend | Node.js, Express, LangChain |
+| Database | MongoDB (Mongoose) |
+| AI/LLM | Groq (Llama 3.3, Qwen 3), HuggingFace Embeddings |
+| Memory | Mem0 (persistent user context) |
+| Search | Tavily API |
+| Email | Resend |
+| Analytics | PostHog |
 
-### Backend
-- **Runtime**: Node.js with Express
-- **Database**: MongoDB with Mongoose ODM
-- **AI Services**:
-  - Groq API for study plan generation and PDF analysis
-  - HuggingFace for document embeddings
-  - Tavily API for resource curation
-- **Security**: 
-  - JWT authentication
-  - Rate limiting
-  - Input validation
+## Setup
 
-## Installation
+### Prerequisites
 
-1. Clone the repository:
+- Node.js 18+
+- MongoDB (local or Atlas)
+- API keys: Groq, Tavily, HuggingFace, Mem0, Resend (optional)
+
+### 1. Clone and install
+
 ```bash
 git clone https://github.com/KartikLabhshetwar/mind-mentor
 cd mind-mentor
+make install    # installs deps for all packages
 ```
 
-2. Set up environment variables:
+### 2. Environment variables
 
-Create `.env` file in the root directory with the following variables:
+Create `.env` in root:
 
 ```env
-NEXTAUTH_SECRET=your-secret-key
-MONGODB_URI=your-mongodb-uri
+NEXTAUTH_SECRET=your-secret
 NEXTAUTH_URL=http://localhost:3000
-EXPRESS_BACKEND_URL=http://backend:8000
+MONGODB_URI=your-mongodb-uri
+
+GROQ_API_KEY=your-groq-key
+GROQ_API_KEY_RAG=your-groq-rag-key
+TAVILY_API_KEY=your-tavily-key
+HUGGINGFACE_API_KEY=your-hf-key
+
+AGENT_SERVICE_SECRET=dev-agent-secret-local
+RESEND_API_KEY=your-resend-key
+
 NEXT_PUBLIC_POSTHOG_KEY=your-posthog-key
-NEXT_PUBLIC_POSTHOG_HOST=your-posthog-host
-NEXT_PUBLIC_API_URL=http://backend:8000
-API_URL=http://backend:8000
-GROQ_API_KEY=your-groq-api-key
-GROQ_API_KEY_RAG=your-groq-rag-api-key
-TAVILY_API_KEY=your-tavily-api-key
+NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 ```
 
-3. Build with Docker Compose:
+Create `mind-mentor-agents/.dev.vars`:
+
+```env
+GROQ_API_KEY=your-groq-key
+MEM0_API_KEY=your-mem0-key
+RESEND_API_KEY=your-resend-key
+AGENT_SERVICE_SECRET=dev-agent-secret-local
+NEXTAUTH_SECRET=your-secret
+EXPRESS_BACKEND_URL=http://localhost:8000
+```
+
+### 3. Run locally
 
 ```bash
-docker compose build
+make dev
 ```
 
-4. Run with Docker Compose:
+This starts three services:
+- **Next.js** → http://localhost:3000
+- **Express** → http://localhost:8000
+- **Agents (Wrangler)** → http://localhost:8787
+
+### Docker
 
 ```bash
 docker compose up -d
 ```
 
-The application will be available at:
+Runs frontend (:3000) and backend (:8000). Agents run separately via Wrangler.
 
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8000
+## Project Structure
 
-## API Integration
-
-### Groq API
-Used for:
-- Study plan generation
-- Resource description enhancement
-- Learning path recommendations
-
-### Tavily API
-Used for:
-- Educational resource curation
-- Content relevance scoring
-- Resource metadata extraction
-
-## Usage Guide
-
-### Study Plan Generation
-1. Navigate to the study plan section
-2. Enter your subject and exam date
-3. Click "Generate Plan"
-4. View and customize your personalized study schedule
-
-### Pomodoro Timer
-1. A 25 minute timer work/break duration
-2. Start your study session
-3. Follow the timer prompts for breaks
-4. View your session history and statistics
-5. Adjust intervals based on productivity patterns
-
-### Notes Management
-1. Create new notes with rich text formatting
-2. Organize notes by subjects/topics
-3. Use the search function to find specific content
-4. Export notes in various formats
-5. Access your notes across devices
-
-### PDF Chat Assistant
-1. Upload your PDF document
-2. Ask questions about the content
-3. View source pages and relevant excerpts
-4. Navigate through the document while chatting
-5. Access chat history for previous conversations
+```
+mind-mentor/
+├── src/                          # Next.js frontend
+│   ├── app/(dashboard)/          # Authenticated pages
+│   ├── app/api/                  # Next.js API routes
+│   ├── components/               # React components
+│   ├── lib/                      # Utilities, auth, agent client
+│   └── store/                    # Zustand stores
+├── server/                       # Express backend
+│   ├── routes/                   # API routes
+│   ├── models/                   # Mongoose schemas
+│   ├── services/                 # AI, PDF, storage services
+│   └── middleware/               # Auth middleware
+├── mind-mentor-agents/           # Cloudflare Workers
+│   ├── src/agents/               # Tutor, Analyst, Scheduler
+│   ├── src/intelligence/         # SM-2, patterns, knowledge graph
+│   ├── src/email/                # Resend client + templates
+│   └── src/memory/               # Mem0 integration
+└── docker-compose.yml
+```
 
 ## Contributing
 
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
+1. Fork the repo
 2. Create a feature branch
-3. Commit your changes
-4. Push to your branch
-5. Create a Pull Request
+3. Commit changes
+4. Open a Pull Request
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+Apache 2.0 — see [LICENSE](LICENSE)
 
 ---
 
-Built with 💡 by Kartik Labhshetwar
+Built by [Kartik Labhshetwar](https://github.com/KartikLabhshetwar)

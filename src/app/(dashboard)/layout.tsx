@@ -1,6 +1,7 @@
 "use client"
 
 import { DashboardNav } from "@/components/dashboard/DashboardNav"
+import { ChatWidget } from "@/components/chat/ChatWidget"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 
@@ -15,7 +16,7 @@ export default function DashboardLayout({
     <div className="min-h-screen">
       <div className="flex flex-col md:flex-row">
         {/* Mobile nav - shown only on small screens */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#191919] z-50">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background z-50">
           <DashboardNav className="h-full" />
         </div>
 
@@ -43,6 +44,7 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
+      <ChatWidget />
     </div>
   )
 }

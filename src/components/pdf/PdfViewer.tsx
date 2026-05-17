@@ -247,11 +247,10 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
 
   return (
     <div className={cn(
-      "flex flex-col border-2 border-black rounded-lg overflow-hidden relative bg-background",
+      "flex flex-col rounded-xl overflow-hidden relative bg-white/60 backdrop-blur-sm border border-[var(--color-aqua-300)] shadow-sm",
       uiState.isFullscreen ? "fixed inset-0 z-50" : "w-full h-full"
     )}>
-      {/* Mobile Header */}
-      <div className="flex items-center justify-between p-2 border-b border-black bg-muted/40">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--color-aqua-300)]/60 bg-white/40">
         <div className="flex items-center gap-2">
           <Link href="/pdf" className="hover:opacity-80">
             <Button variant="ghost" size="sm" className="gap-2">
@@ -286,9 +285,8 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
         </div>
       </div>
 
-      {/* Mobile Controls Menu */}
       <div className={cn(
-        "lg:hidden flex flex-col gap-4 p-4 bg-muted/40 border-b border-black transition-all duration-300",
+        "lg:hidden flex flex-col gap-4 p-4 bg-white/30 border-b border-[var(--color-aqua-300)]/60 transition-all duration-300",
         uiState.showMobileMenu ? "block" : "hidden"
       )}>
         {/* Page Navigation and Zoom Display */}
@@ -362,8 +360,7 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
         </div>
       </div>
 
-      {/* Desktop Controls */}
-      <div className="hidden lg:flex items-center justify-between p-2 border-b border-black bg-muted/40">
+      <div className="hidden lg:flex items-center justify-between px-3 py-2 border-b border-[var(--color-aqua-300)]/60 bg-white/30">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"

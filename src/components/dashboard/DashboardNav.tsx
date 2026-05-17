@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Brain, FileText, Home, Timer, Users, LogOut, PanelLeftClose, PanelLeft, FileUp } from "lucide-react"
+import { FileText, Home, Timer, Users, LogOut, PanelLeftClose, PanelLeft, BarChart3, Settings, Sparkles } from "lucide-react"
 import { signOut, useSession } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState } from "react"
@@ -53,24 +53,14 @@ export function DashboardNav({ className, onCollapse, ...props }: DashboardNavPr
       ]
     },
     {
-      title: "Study Tools", 
+      title: "Study Tools",
       items: [
         {
-          label: 'Planner',
-          icon: BookOpen,
-          href: '/study-plan',
+          label: 'AI Tutor',
+          icon: Sparkles,
+          href: '/dashboard',
         },
-        {
-          label: 'Resources',
-          icon: Brain,
-          href: '/resources',
-        },
-        {
-          label: 'Scriba',
-          icon: FileUp,
-          href: '/pdf',
-        },
-        {
+{
           label: 'Timer',
           icon: Timer,
           href: '/timer',
@@ -80,11 +70,21 @@ export function DashboardNav({ className, onCollapse, ...props }: DashboardNavPr
           icon: FileText,
           href: '/notes',
         },
+        {
+          label: 'Analytics',
+          icon: BarChart3,
+          href: '/insights',
+        },
       ]
     },
     {
       title: "Account",
       items: [
+        {
+          label: 'Settings',
+          icon: Settings,
+          href: '/settings/reminders',
+        },
         {
           label: 'Log out',
           icon: LogOut,

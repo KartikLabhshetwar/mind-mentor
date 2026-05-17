@@ -86,6 +86,24 @@
     --input: var(--color-navy-800);
     --ring: var(--color-aqua-500);
   }
+
+  .unified-dark {
+    /* Custom tokens — matched to dashboard cream/navy palette */
+    --bg-primary: var(--color-cream-900);
+    --bg-secondary: var(--color-cream-700);
+    --bg-sidebar: var(--color-cream-500);
+    --bg-surface: var(--color-cream-300);
+    --bg-surface-hover: var(--color-cream-100);
+    --accent: var(--color-teal-900);
+    --accent-muted: rgba(73, 125, 116, 0.15);
+    --text-primary: var(--color-navy-900);
+    --text-secondary: var(--color-navy-800);
+    --text-muted: var(--color-navy-700);
+    --border-color: var(--color-aqua-300);
+    --input-bg: white;
+    --error: #b9004b;
+    --warning: #d97706;
+  }
 }
 
 /* Base styles */

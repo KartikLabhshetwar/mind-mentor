@@ -1,0 +1,27 @@
+{
+  "name": "mind-mentor-agents",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.4.0",
+    "groq-sdk": "0.3.0",
+    "mem0ai": "^2.4.6",
+    "resend": "^3.2.0",
+    "jose": "^5.6.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.60.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0",
+    "@cloudflare/workers-types": "^4.20240529.0",
+    "@types/react": "^18.3.0"
+  }
+}

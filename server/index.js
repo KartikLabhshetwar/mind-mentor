@@ -6,12 +6,21 @@ import dotenv from 'dotenv';
 import curateResourcesRouter from './routes/curateResources.js';
 import generatePlanRouter from './routes/generatePlan.js';
 import pdfChatRouter from './routes/pdfChat.js';
+import analyticsRouter from './routes/analytics.js';
+import remindersRouter from './routes/reminders.js';
+import chatHistoryRouter from './routes/chatHistory.js';
+import topicMasteryRouter from './routes/topicMastery.js';
+import webhooksRouter from './routes/webhooks.js';
+import quizRouter from './routes/quiz.js';
+import performanceRouter from './routes/performance.js';
+import userChatHistoryRouter from './routes/userChatHistory.js';
+import { validateUserAuth } from './middleware/userAuth.js';
 import rateLimit from 'express-rate-limit';
 import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
-// Load environment variables
-dotenv.config();
+// Load environment variables from root .env
+dotenv.config({ path: path.resolve(import.meta.dirname, '../.env') });
 
 // Ensure required directories exist
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -85,6 +94,16 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/generate-plan', generatePlanRouter);
 app.use('/curate-resources', curateResourcesRouter);
 app.use('/pdf', pdfChatRouter);
+
+// New agent-facing routes
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/reminders', remindersRouter);
+app.use('/api/chat/history', chatHistoryRouter);
+app.use('/api/topics/mastery', topicMasteryRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/quiz', validateUserAuth, quizRouter);
+app.use('/api/performance', validateUserAuth, performanceRouter);
+app.use('/api/user/chat-history', validateUserAuth, userChatHistoryRouter);
 
 // Error handling middleware
 app.use((err, req, res) => {

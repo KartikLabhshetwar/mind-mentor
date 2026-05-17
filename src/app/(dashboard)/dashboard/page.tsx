@@ -122,11 +122,12 @@ export default function UnifiedDashboard() {
           content: [{ type: "text", data: answer + sourceText }],
         };
         setMessages(prev => [...prev, assistantMsg]);
+        saveMessages(question, answer + sourceText);
       }
     } catch { /* silent */ } finally {
       setIsStreaming(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, saveMessages]);
 
   const handleSend = useCallback(async (message: string) => {
     if (!session?.token) return;

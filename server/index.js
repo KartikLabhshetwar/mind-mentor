@@ -11,6 +11,7 @@ import remindersRouter from './routes/reminders.js';
 import chatHistoryRouter from './routes/chatHistory.js';
 import topicMasteryRouter from './routes/topicMastery.js';
 import webhooksRouter from './routes/webhooks.js';
+import webSearchRouter from './routes/webSearch.js';
 import quizRouter from './routes/quiz.js';
 import performanceRouter from './routes/performance.js';
 import userChatHistoryRouter from './routes/userChatHistory.js';
@@ -94,6 +95,7 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/generate-plan', generatePlanRouter);
 app.use('/curate-resources', curateResourcesRouter);
 app.use('/pdf', pdfChatRouter);
+app.use('/web-search', webSearchRouter);
 
 // New agent-facing routes
 app.use('/api/analytics', analyticsRouter);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import ResourceCurator from "@/components/resources/ResourceCurator";
+import WebSearch from "@/components/resources/WebSearch";
 import { StoredResources } from "@/components/resources/StoredResources";
 import { Separator } from "@/components/ui/separator";
 import type { CuratedResource } from "@/components/resources/StoredResources";
@@ -18,6 +19,7 @@ export default function ResourcesPage() {
   const [storedResources, setStoredResources] = useState<CuratedResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"curate" | "search">("curate");
   const { toast } = useToast();
 
   const fetchResources = useCallback(async () => {
@@ -154,13 +156,36 @@ export default function ResourcesPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0 mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Resource Curator</h1>
-        <div className="flex items-center">
-          <span className="text-xs sm:text-sm text-gray-600">Find and manage learning resources</span>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Resources</h1>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab("curate")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "curate"
+                ? "bg-black text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Curate Resources
+          </button>
+          <button
+            onClick={() => setActiveTab("search")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "search"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            Web Search
+          </button>
         </div>
       </div>
       <div className="w-full max-w-10xl mx-auto">
-        <ResourceCurator onCreateResources={handleCreateResources} />
+        {activeTab === "curate" ? (
+          <ResourceCurator onCreateResources={handleCreateResources} />
+        ) : (
+          <WebSearch />
+        )}
       </div>
 
       {/* Stored Resources Section */}

@@ -26,13 +26,17 @@ tutorRoutes.post("/chat", async (c) => {
     ? message.slice(message.indexOf(" ") + 1).trim()
     : message;
 
+  const detectedIntent = !command ? detectIntent(message) : null;
+  const effectiveCommand = command || detectedIntent?.type;
+  const effectiveArg = command ? commandArg : (detectedIntent?.topic || message);
+
   // Handle /resources command — call Tavily via Express backend
-  if (command === "resources" && commandArg) {
+  if (effectiveCommand === "resources" && effectiveArg) {
     return streamSSE(c, async (stream) => {
       try {
-        await stream.writeSSE({ data: `Searching for resources on **${commandArg}**...\n\n` });
+        await stream.writeSSE({ data: `Searching for resources on **${effectiveArg}**...\n\n` });
 
-        const result = await express.curateResources(userId, commandArg);
+        const result = await express.curateResources(userId, effectiveArg);
 
         if (!result || !result.success) {
           const errorMsg = result?.message || "Failed to find resources. Try again.";
@@ -49,17 +53,53 @@ tutorRoutes.post("/chat", async (c) => {
             description: r.description,
           }));
           await stream.writeSSE({ event: "resources", data: JSON.stringify({ items }) });
-          await stream.writeSSE({ data: `\n\nFound **${items.length}** resources for "${commandArg}". Click any to open.` });
+          await stream.writeSSE({ data: `\n\nFound **${items.length}** resources for "${effectiveArg}". Click any to open.` });
         } else {
           await stream.writeSSE({ data: "No resources found for that topic. Try a different search term." });
         }
 
         await stream.writeSSE({ event: "done", data: "" });
 
-        addUserMemory(mem0, userId, `User searched for resources on: "${commandArg}"`, "resource_search");
+        addUserMemory(mem0, userId, `User searched for resources on: "${effectiveArg}"`, "resource_search");
       } catch (error) {
         console.error("Resource curation error:", error);
         await stream.writeSSE({ data: "Something went wrong while searching for resources." });
+        await stream.writeSSE({ event: "done", data: "" });
+      }
+    });
+  }
+
+  // Handle /search command — web search via Tavily
+  if (effectiveCommand === "search" && effectiveArg) {
+    return streamSSE(c, async (stream) => {
+      try {
+        await stream.writeSSE({ data: `Searching the web for **${effectiveArg}**...\n\n` });
+
+        const result = await express.webSearch(effectiveArg);
+
+        if (!result || !result.results?.length) {
+          await stream.writeSSE({ data: "No results found. Try a different query." });
+          await stream.writeSSE({ event: "done", data: "" });
+          return;
+        }
+
+        if (result.answer) {
+          await stream.writeSSE({ data: `**Quick Answer:** ${result.answer}\n\n---\n\n` });
+        }
+
+        const items = result.results.slice(0, 8).map((r: { title: string; url: string; content: string }) => ({
+          title: r.title,
+          url: r.url,
+          description: r.content,
+        }));
+        await stream.writeSSE({ event: "resources", data: JSON.stringify({ items }) });
+        await stream.writeSSE({ data: `\nFound **${items.length}** results. Click any to open.` });
+        await stream.writeSSE({ event: "done", data: "" });
+
+        addUserMemory(mem0, userId, `User searched the web for: "${effectiveArg}"`, "web_search");
+      } catch (error) {
+        console.error("Web search error:", error);
+        await stream.writeSSE({ data: "Something went wrong during web search." });
         await stream.writeSSE({ event: "done", data: "" });
       }
     });
@@ -125,6 +165,41 @@ Instructions:
     }
   });
 });
+
+function detectIntent(message: string): { type: string; topic: string } | null {
+  const lower = message.toLowerCase();
+
+  const resourcePatterns = [
+    /(?:find|get|show|give|suggest|recommend)\s+(?:me\s+)?(?:some\s+)?(?:learning\s+)?resources?\s+(?:for|on|about)\s+(.+)/i,
+    /(?:curate|compile)\s+(?:some\s+)?resources?\s+(?:for|on|about)\s+(.+)/i,
+    /(?:i\s+(?:want|need)\s+(?:to\s+)?(?:learn|study))\s+(.+?)(?:\s+resources)?$/i,
+  ];
+
+  const searchPatterns = [
+    /(?:search|look\s*up|google|find)\s+(?:the\s+web\s+)?(?:for\s+)?(.+)/i,
+    /(?:search|look\s*up|google|find)\s+(?:on\s+the\s+web|online)\s+(?:for\s+)?(.+)/i,
+    /(?:what\s+is|what\s+are|how\s+(?:to|do|does|can))\s+(.+)\??$/i,
+  ];
+
+  for (const pattern of resourcePatterns) {
+    const match = message.match(pattern);
+    if (match) return { type: "resources", topic: match[1].trim().replace(/[?.!]+$/, "") };
+  }
+
+  for (const pattern of searchPatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      if (lower.includes("resource") || lower.includes("learn") || lower.includes("tutorial") || lower.includes("course")) {
+        return { type: "resources", topic: match[1].trim().replace(/[?.!]+$/, "") };
+      }
+      if (lower.startsWith("search") || lower.startsWith("look up") || lower.startsWith("google") || lower.includes("on the web") || lower.includes("online")) {
+        return { type: "search", topic: match[1].trim().replace(/[?.!]+$/, "") };
+      }
+    }
+  }
+
+  return null;
+}
 
 async function extractAndUpdateTopics(
   groq: InstanceType<typeof Groq>,

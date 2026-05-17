@@ -135,6 +135,20 @@ export const apiClient = {
     return data;
   },
 
+  async webSearch(query: string) {
+    const response = await fetch(`${API_BASE_URL}/web-search`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query }),
+    });
+    if (!response.ok) {
+      throw { status: response.status, ...(await response.json()) };
+    }
+    return response.json();
+  },
+
   async deleteCuratedResources(resourceId: string) {
     const response = await fetch(
       `${API_BASE_URL}/curate-resources/${resourceId}`,

@@ -28,7 +28,8 @@
     "node-fetch": "^3.3.2",
     "pdf-parse": "^1.1.1",
     "axios": "^1.11.0",
-    "@xenova/transformers": "^2.15.0"
+    "@xenova/transformers": "^2.15.0",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"

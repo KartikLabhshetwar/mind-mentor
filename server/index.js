@@ -11,6 +11,9 @@ import remindersRouter from './routes/reminders.js';
 import chatHistoryRouter from './routes/chatHistory.js';
 import topicMasteryRouter from './routes/topicMastery.js';
 import webhooksRouter from './routes/webhooks.js';
+import quizRouter from './routes/quiz.js';
+import performanceRouter from './routes/performance.js';
+import { validateUserAuth } from './middleware/userAuth.js';
 import rateLimit from 'express-rate-limit';
 import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
@@ -97,6 +100,8 @@ app.use('/api/reminders', remindersRouter);
 app.use('/api/chat/history', chatHistoryRouter);
 app.use('/api/topics/mastery', topicMasteryRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/quiz', validateUserAuth, quizRouter);
+app.use('/api/performance', validateUserAuth, performanceRouter);
 
 // Error handling middleware
 app.use((err, req, res) => {

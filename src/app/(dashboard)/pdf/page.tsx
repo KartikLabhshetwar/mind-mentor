@@ -30,6 +30,7 @@ export default function PdfListPage() {
     if (status === 'authenticated') {
       fetchDocuments();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const fetchDocuments = async () => {

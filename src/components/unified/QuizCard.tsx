@@ -17,7 +17,7 @@ interface QuizData {
 
 interface QuizCardProps {
   quiz: QuizData;
-  onSubmit?: (quizId: string, answers: { questionIndex: number; answer: number }[]) => void;
+  onSubmit?: (quizId: string, answers: { questionIndex: number; answer: number }[], questions: QuizQuestion[]) => void;
 }
 
 export function QuizCard({ quiz, onSubmit }: QuizCardProps) {
@@ -38,7 +38,7 @@ export function QuizCard({ quiz, onSubmit }: QuizCardProps) {
   const handleSubmit = () => {
     setSubmitted(true);
     if (onSubmit && quiz.id) {
-      onSubmit(quiz.id, answers.map((a, i) => ({ questionIndex: i, answer: a ?? -1 })));
+      onSubmit(quiz.id, answers.map((a, i) => ({ questionIndex: i, answer: a ?? -1 })), quiz.questions);
     }
   };
 

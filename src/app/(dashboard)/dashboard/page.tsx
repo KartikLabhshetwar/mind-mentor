@@ -58,12 +58,12 @@ export default function UnifiedDashboard() {
     );
   }, [session]);
 
-  const handleQuizSubmit = async (quizId: string, answers: { questionIndex: number; answer: number }[]) => {
+  const handleQuizSubmit = async (quizId: string, answers: { questionIndex: number; answer: number }[], questions: { question: string; options: string[]; correctAnswer: number }[]) => {
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/quiz/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quizId, answers }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.token}` },
+        body: JSON.stringify({ quizId, answers, questions }),
       });
     } catch { /* silent */ }
   };
@@ -90,13 +90,13 @@ export default function UnifiedDashboard() {
           </button>
         </div>
 
-        <ChatArea messages={messages} isStreaming={isStreaming} onQuizSubmit={handleQuizSubmit} />
+        <ChatArea messages={messages} isStreaming={isStreaming} onQuizSubmit={handleQuizSubmit} onSend={handleSend} />
         <ChatInput onSend={handleSend} disabled={isStreaming} />
       </div>
 
       {contextPanelOpen && (
         <div className="hidden lg:block w-72 border-l border-[var(--border-color)] bg-[var(--bg-secondary)] overflow-hidden">
-          <ContextPanel onTriggerCommand={(cmd) => handleSend(cmd)} />
+          <ContextPanel onTriggerCommand={(cmd) => handleSend(cmd)} token={session?.token} />
         </div>
       )}
     </div>

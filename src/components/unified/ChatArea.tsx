@@ -21,10 +21,11 @@ function stripThinkingTags(content: string): string {
 interface ChatAreaProps {
   messages: Message[];
   isStreaming: boolean;
-  onQuizSubmit?: (quizId: string, answers: { questionIndex: number; answer: number }[]) => void;
+  onQuizSubmit?: (quizId: string, answers: { questionIndex: number; answer: number }[], questions: { question: string; options: string[]; correctAnswer: number }[]) => void;
+  onSend?: (message: string) => void;
 }
 
-export function ChatArea({ messages, isStreaming, onQuizSubmit }: ChatAreaProps) {
+export function ChatArea({ messages, isStreaming, onQuizSubmit, onSend }: ChatAreaProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export function ChatArea({ messages, isStreaming, onQuizSubmit }: ChatAreaProps)
             </p>
             <div className="flex flex-wrap gap-2 justify-center mt-4">
               {["Quiz me on calculus", "Find resources for data structures", "Create a study plan for finals"].map(s => (
-                <button key={s} className="text-xs px-3 py-2 rounded-lg bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] border border-[var(--border-color)] transition-colors">
+                <button key={s} onClick={() => onSend?.(s)} className="text-xs px-3 py-2 rounded-lg bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] border border-[var(--border-color)] transition-colors">
                   {s}
                 </button>
               ))}

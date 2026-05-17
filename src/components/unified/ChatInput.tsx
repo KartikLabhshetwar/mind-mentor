@@ -21,9 +21,9 @@ export function ChatInput({ onSend, onFileUpload, disabled }: ChatInputProps) {
     const val = e.target.value;
     setInput(val);
 
-    if (val.startsWith("/")) {
+    if (val.startsWith("/") && !val.includes(" ")) {
       setShowPalette(true);
-      setPaletteQuery(val);
+      setPaletteQuery(val.slice(1));
     } else {
       setShowPalette(false);
     }

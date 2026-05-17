@@ -48,7 +48,12 @@ router.get("/summary/:userId", async (req, res) => {
       }
     }
 
-    res.json({ overallScore, topics, weakTopics, nextReviews, streak });
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayQuestions = await QuizResult.countDocuments({
+      userId, completedAt: { $gte: todayStart },
+    });
+
+    res.json({ overallScore, topics, weakTopics, nextReviews, streak, todayQuestions });
   } catch (error) {
     console.error("Performance summary error:", error);
     res.status(500).json({ error: "Failed to fetch performance summary" });

@@ -13,6 +13,7 @@ import { StreakSection } from "./context/StreakSection";
 
 interface ContextPanelProps {
   onTriggerCommand: (command: string) => void;
+  token?: string;
 }
 
 function AccordionSection({ title, defaultOpen, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
@@ -33,19 +34,22 @@ interface PerformanceData {
   topics: { topic: string; mastery: number; subject: string }[];
   weakTopics: { topic: string; mastery: number; daysSinceReview: number | null; reviewOverdue: boolean }[];
   streak: number;
+  todayQuestions?: number;
 }
 
-export function ContextPanel({ onTriggerCommand }: ContextPanelProps) {
+export function ContextPanel({ onTriggerCommand, token }: ContextPanelProps) {
   const { data: session } = useSession();
   const [data, setData] = useState<PerformanceData | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id || !token) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/performance/summary/${session.user.id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/performance/summary/${session.user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) setData(await res.json());
     } catch { /* silent */ }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, token]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => {
@@ -84,7 +88,7 @@ export function ContextPanel({ onTriggerCommand }: ContextPanelProps) {
       </AccordionSection>
 
       <AccordionSection title="Streak">
-        <StreakSection streak={data?.streak ?? 0} todayQuestions={0} />
+        <StreakSection streak={data?.streak ?? 0} todayQuestions={data?.todayQuestions ?? 0} />
       </AccordionSection>
     </div>
   );

@@ -27,7 +27,6 @@ export const config = {
     "/signin",
     "/home",
     "/dashboard",
-    "/study-plan",
     "/resources",
     "/timer",
     "/analytics",

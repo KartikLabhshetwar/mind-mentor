@@ -10,6 +10,7 @@ import { StudyPlanSection } from "./context/StudyPlanSection";
 import { ResourcesSection } from "./context/ResourcesSection";
 import { MemorySection } from "./context/MemorySection";
 import { StreakSection } from "./context/StreakSection";
+import { fetchMemories } from "@/lib/agent-client";
 
 interface ContextPanelProps {
   onTriggerCommand: (command: string) => void;
@@ -40,6 +41,7 @@ interface PerformanceData {
 export function ContextPanel({ onTriggerCommand, token }: ContextPanelProps) {
   const { data: session } = useSession();
   const [data, setData] = useState<PerformanceData | null>(null);
+  const [memories, setMemories] = useState<{ id: string; text: string }[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!session?.user?.id || !token) return;
@@ -51,16 +53,20 @@ export function ContextPanel({ onTriggerCommand, token }: ContextPanelProps) {
     } catch { /* silent */ }
   }, [session?.user?.id, token]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const loadMemories = useCallback(async () => {
+    if (!token) return;
+    const mems = await fetchMemories(token);
+    setMemories(mems);
+  }, [token]);
+
+  useEffect(() => { fetchData(); loadMemories(); }, [fetchData, loadMemories]);
   useEffect(() => {
-    const interval = setInterval(fetchData, 60000);
+    const interval = setInterval(() => { fetchData(); loadMemories(); }, 60000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, loadMemories]);
 
   return (
     <div className="h-full overflow-y-auto p-4 space-y-0">
-      <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">Study Dashboard</h3>
-
       <AccordionSection title="Performance" defaultOpen>
         <ScoreSection
           overallScore={data?.overallScore ?? 0}
@@ -83,8 +89,8 @@ export function ContextPanel({ onTriggerCommand, token }: ContextPanelProps) {
         <ResourcesSection resources={[]} />
       </AccordionSection>
 
-      <AccordionSection title="AI Memory">
-        <MemorySection memories={[]} />
+      <AccordionSection title="AI Memory" defaultOpen={memories.length > 0}>
+        <MemorySection memories={memories} />
       </AccordionSection>
 
       <AccordionSection title="Streak">

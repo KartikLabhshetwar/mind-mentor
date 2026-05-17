@@ -69,7 +69,7 @@ if [ ! -f "$AGENTS_DIR/.dev.vars" ]; then
 NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 GROQ_API_KEY=${GROQ_API_KEY}
 MONGODB_URI=${MONGODB_URI}
-AGENT_SECRET=dev-agent-secret-local
+AGENT_SERVICE_SECRET=dev-agent-secret-local
 MEM0_API_KEY=your-mem0-api-key-here
 RESEND_API_KEY=your-resend-api-key-here
 EOF
@@ -79,10 +79,10 @@ EOF
 fi
 
 # Also ensure Express knows the agent secret
-if ! grep -q "AGENT_SECRET" "$ROOT_DIR/.env"; then
+if ! grep -q "AGENT_SERVICE_SECRET" "$ROOT_DIR/.env"; then
   echo "" >> "$ROOT_DIR/.env"
-  echo "AGENT_SECRET=dev-agent-secret-local" >> "$ROOT_DIR/.env"
-  echo -e "${GREEN}✓ Added AGENT_SECRET to root .env${NC}"
+  echo "AGENT_SERVICE_SECRET=dev-agent-secret-local" >> "$ROOT_DIR/.env"
+  echo -e "${GREEN}✓ Added AGENT_SERVICE_SECRET to root .env${NC}"
 fi
 
 # ── Install dependencies if needed ───────────────────────────────────────────

@@ -39,13 +39,16 @@ export async function streamChat(
 
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
+    let finished = false;
     const parser = createParser((event) => {
       if (event.type === "event") {
         if (event.event === "done") {
+          finished = true;
           onDone();
           return;
         }
         if (event.event === "error") {
+          finished = true;
           onError(event.data);
           return;
         }
@@ -62,7 +65,7 @@ export async function streamChat(
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
-        onDone();
+        if (!finished) onDone();
         break;
       }
       parser.feed(decoder.decode(value));
@@ -81,6 +84,24 @@ export async function triggerAnalysis(token: string, type: "full" | "quick") {
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+export async function fetchMemories(token: string): Promise<{ id: string; text: string }[]> {
+  try {
+    const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8787";
+    const res = await fetch(`${agentUrl}/agents/analyst/insights`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const memories = data.memories || [];
+    return memories.map((m: { id?: string; memory?: string; content?: string }, i: number) => ({
+      id: m.id || String(i),
+      text: m.memory || m.content || "",
+    })).filter((m: { text: string }) => m.text);
+  } catch {
+    return [];
+  }
 }
 
 export async function configureReminders(token: string, preferences: unknown) {

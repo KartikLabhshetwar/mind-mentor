@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BookOpen, Brain, FileText, Home, Timer, Users, LogOut, PanelLeftClose, PanelLeft, FileUp, MessageSquare, BarChart3, Settings, Sparkles } from "lucide-react"
+import { FileText, Home, Timer, Users, LogOut, PanelLeftClose, PanelLeft, BarChart3, Settings, Sparkles } from "lucide-react"
 import { signOut, useSession } from 'next-auth/react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useState } from "react"
@@ -59,24 +59,8 @@ export function DashboardNav({ className, onCollapse, ...props }: DashboardNavPr
           label: 'AI Tutor',
           icon: Sparkles,
           href: '/dashboard',
-          badge: 'New',
         },
-        {
-          label: 'Planner',
-          icon: BookOpen,
-          href: '/study-plan',
-        },
-        {
-          label: 'Resources',
-          icon: Brain,
-          href: '/resources',
-        },
-        {
-          label: 'Scriba',
-          icon: FileUp,
-          href: '/pdf',
-        },
-        {
+{
           label: 'Timer',
           icon: Timer,
           href: '/timer',
@@ -87,12 +71,7 @@ export function DashboardNav({ className, onCollapse, ...props }: DashboardNavPr
           href: '/notes',
         },
         {
-          label: 'Chat',
-          icon: MessageSquare,
-          href: '/chat',
-        },
-        {
-          label: 'Insights',
+          label: 'Analytics',
           icon: BarChart3,
           href: '/insights',
         },

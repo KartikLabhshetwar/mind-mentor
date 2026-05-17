@@ -10,11 +10,12 @@ export interface PatternResult {
   avgSessionDuration: number;
   fatigueThreshold: number;
   learningVelocity: Record<string, number>;
+  currentStreak: number;
 }
 
-export function detectPatterns(sessions: StudySession[]): PatternResult {
+export function detectPatterns(sessions: StudySession[], currentStreak = 0): PatternResult {
   if (sessions.length === 0) {
-    return { optimalStudyTime: "unknown", avgSessionDuration: 0, fatigueThreshold: 60, learningVelocity: {} };
+    return { optimalStudyTime: "unknown", avgSessionDuration: 0, fatigueThreshold: 0, learningVelocity: {}, currentStreak };
   }
 
   const hourCounts: Record<number, number> = {};
@@ -27,10 +28,10 @@ export function detectPatterns(sessions: StudySession[]): PatternResult {
 
   const peakHour = Number(Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0][0]);
   const optimalStudyTime = `${peakHour}:00-${peakHour + 1}:00`;
-  const avgSessionDuration = Math.round(totalDuration / sessions.length);
+  const avgSessionDuration = Math.round(totalDuration / sessions.length / 60);
 
   const sorted = [...sessions].sort((a, b) => a.duration - b.duration);
-  const fatigueThreshold = sorted[Math.floor(sorted.length / 2)].duration;
+  const fatigueThreshold = Math.round(sorted[Math.floor(sorted.length / 2)].duration / 60);
 
   const subjectDays: Record<string, Set<string>> = {};
   for (const session of sessions) {
@@ -45,5 +46,5 @@ export function detectPatterns(sessions: StudySession[]): PatternResult {
     learningVelocity[subject] = Math.round((days.size / 7) * 10) / 10;
   }
 
-  return { optimalStudyTime, avgSessionDuration, fatigueThreshold, learningVelocity };
+  return { optimalStudyTime, avgSessionDuration, fatigueThreshold, learningVelocity, currentStreak };
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type MutableRefObject } from "react";
 import { useSession } from "next-auth/react";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Plus, MessageSquare, LogOut, PanelLeftClose, PanelLeft, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 interface Conversation {
   _id: string;
@@ -18,25 +20,32 @@ interface ChatHistoryProps {
   onToggleCollapse: () => void;
   onSelectConversation: (id: string | null) => void;
   activeConversationId: string | null;
+  onRefreshRef?: MutableRefObject<(() => void) | null>;
 }
 
-export function ChatHistory({ isCollapsed, onToggleCollapse, onSelectConversation, activeConversationId }: ChatHistoryProps) {
+export function ChatHistory({ isCollapsed, onToggleCollapse, onSelectConversation, activeConversationId, onRefreshRef }: ChatHistoryProps) {
   const { data: session } = useSession();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchHistory = useCallback(async () => {
-    if (!session?.user?.id) return;
+    if (!session?.token) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/chat/history/${session.user.id}`);
+      const res = await fetch(`${API_URL}/api/user/chat-history`, {
+        headers: { Authorization: `Bearer ${session.token}` },
+      });
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
       }
     } catch { /* silent */ }
-  }, [session?.user?.id]);
+  }, [session?.token]);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
+
+  useEffect(() => {
+    if (onRefreshRef) onRefreshRef.current = fetchHistory;
+  }, [onRefreshRef, fetchHistory]);
 
   const getTitle = (conv: Conversation) => {
     const firstMsg = conv.messages.find(m => m.role === "user");

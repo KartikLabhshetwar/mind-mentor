@@ -148,6 +148,30 @@ The application will be available at:
 - Frontend: http://localhost:3000
 - Backend: http://localhost:8000
 
+### Local Development (without Docker)
+
+A Makefile is provided for convenience:
+
+```bash
+# Start all services (Express + Wrangler + Next.js)
+make dev
+
+# Start all services and auto-seed demo data
+make dev-seed
+
+# Install dependencies for all packages
+make install
+
+# Start/stop MongoDB
+make mongo-start
+make mongo-stop
+```
+
+Services started by `make dev`:
+- Express backend → http://localhost:8000
+- Agents (Cloudflare Workers) → http://localhost:8787
+- Next.js frontend → http://localhost:3000
+
 ## API Integration
 
 ### Groq API

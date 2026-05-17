@@ -8,6 +8,10 @@ import { calculateMasteryScore } from "../intelligence/sm2.js";
 import { detectPatterns, StudySession } from "../intelligence/patterns.js";
 import { KnowledgeGraph } from "../intelligence/knowledgeGraph.js";
 
+function stripThinkTags(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+}
+
 export const analystRoutes = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
 analystRoutes.use("*", verifyUserAuth);
@@ -21,16 +25,69 @@ analystRoutes.post("/analyze", async (c) => {
   const groq = new Groq({ apiKey: c.env.GROQ_API_KEY });
 
   const sessionsData = await express.getStudySessions(userId) as any;
-  const masteryData = await express.getTopicMastery(userId) as any[];
+  let masteryData = await express.getTopicMastery(userId) as any[];
 
-  // Pattern detection
+  // If no mastery data, backfill from chat history via LLM extraction
+  if (!masteryData || masteryData.length === 0) {
+    const chatHistory = await express.getChatHistory(userId) as any[];
+    if (chatHistory && chatHistory.length > 0) {
+      const recentMessages = chatHistory
+        .flatMap((ch: any) => ch.messages || [])
+        .slice(-20)
+        .map((m: any) => `${m.role}: ${(m.content || "").slice(0, 200)}`)
+        .join("\n");
+
+      if (recentMessages.length > 50) {
+        try {
+          const extraction = await groq.chat.completions.create({
+            model: "qwen/qwen3-32b",
+            messages: [
+              {
+                role: "system",
+                content: `Analyze these tutoring conversations and extract all topics discussed. Return valid JSON only, no other text.
+Format: {"topics": [{"topic": "specific topic", "subject": "broad subject", "quality": 3}]}
+- quality: 0-5 estimated understanding level based on conversation`,
+              },
+              { role: "user", content: recentMessages },
+            ],
+            max_tokens: 500,
+            temperature: 0.3,
+            stream: false,
+          });
+
+          const rawContent = extraction.choices[0]?.message?.content || '{"topics":[]}';
+          const content = stripThinkTags(rawContent);
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : '{"topics":[]}');
+
+          for (const t of parsed.topics || []) {
+            if (!t.topic || !t.subject) continue;
+            await express.updateTopicMastery(userId, {
+              topic: t.topic,
+              subject: t.subject,
+              mastery: (t.quality || 3) * 20,
+              lastReviewed: new Date().toISOString(),
+              quality: t.quality || 3,
+            });
+          }
+
+          masteryData = await express.getTopicMastery(userId) as any[];
+        } catch {
+          // Continue with empty mastery data
+        }
+      }
+    }
+  }
+
+  // Pattern detection — enrich sessions with subject from mastery data
+  const topSubject = masteryData?.[0]?.subject;
   const sessions: StudySession[] = (sessionsData?.sessions || []).map((s: any) => ({
     date: s.date,
     startHour: s.startHour,
     duration: s.duration,
-    subject: s.subject,
+    subject: s.subject || topSubject || undefined,
   }));
-  const patterns = detectPatterns(sessions);
+  const patterns = detectPatterns(sessions, sessionsData?.currentStreak || 0);
 
   // Build knowledge graph
   const graph = new KnowledgeGraph();
@@ -39,7 +96,7 @@ analystRoutes.post("/analyze", async (c) => {
       id: topic._id || topic.topic,
       topic: topic.topic,
       subject: topic.subject,
-      mastery: calculateMasteryScore(
+      mastery: topic.mastery ?? calculateMasteryScore(
         topic.sm2?.easiness || 2.5,
         topic.sm2?.repetitions || 0,
         daysSince(topic.lastReviewed)
@@ -108,7 +165,8 @@ async function inferPrerequisites(groq: InstanceType<typeof Groq>, topics: strin
       temperature: 0.3,
       stream: false,
     });
-    const content = completion.choices[0]?.message?.content || '{"edges":[]}';
+    const rawContent = completion.choices[0]?.message?.content || '{"edges":[]}';
+    const content = stripThinkTags(rawContent);
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const result = JSON.parse(jsonMatch ? jsonMatch[0] : '{"edges":[]}');
     return result.edges || [];
@@ -132,7 +190,8 @@ async function generateRecommendations(groq: InstanceType<typeof Groq>, patterns
       temperature: 0.7,
       stream: false,
     });
-    const content = completion.choices[0]?.message?.content || '{"recommendations":[]}';
+    const rawContent = completion.choices[0]?.message?.content || '{"recommendations":[]}';
+    const content = stripThinkTags(rawContent);
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const result = JSON.parse(jsonMatch ? jsonMatch[0] : '{"recommendations":[]}');
     return result.recommendations || [];

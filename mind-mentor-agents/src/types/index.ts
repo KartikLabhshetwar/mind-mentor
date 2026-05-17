@@ -46,6 +46,7 @@ export interface AnalysisResult {
     avgSessionDuration: number;
     learningVelocity: Record<string, number>;
     fatigueThreshold: number;
+    currentStreak: number;
   };
   knowledgeGraph: {
     nodes: TopicNode[];

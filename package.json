@@ -58,6 +58,7 @@
     "react-tsparticles": "^2.12.2",
     "react-tweet": "^3.2.2",
     "recharts": "^3.8.1",
+    "resend": "^6.12.3",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7",

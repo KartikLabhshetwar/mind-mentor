@@ -42,5 +42,24 @@ export function createExpressClient(env: Env) {
         body: JSON.stringify({ userId, messages }),
       });
     },
+
+    async getChatHistory(userId: string) {
+      const res = await fetch(`${baseUrl}/api/chat/history/${userId}`, { headers });
+      if (!res.ok) return [];
+      return res.json();
+    },
+
+    async curateResources(userId: string, subject: string) {
+      try {
+        const res = await fetch(`${baseUrl}/curate-resources`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ userId, subject }),
+        });
+        return res.json();
+      } catch {
+        return null;
+      }
+    },
   };
 }

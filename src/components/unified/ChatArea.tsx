@@ -3,9 +3,11 @@
 import { useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { QuizCard } from "./QuizCard";
+import { MindMentorLogo } from "@/components/ui/MindMentorLogo";
+import { FileText, BookOpen, MessageSquare } from "lucide-react";
 
 export interface MessageContent {
-  type: "text" | "quiz" | "resources" | "plan";
+  type: "text" | "quiz" | "resources" | "plan" | "pdf";
   data: string;
 }
 
@@ -73,11 +75,44 @@ export function ChatArea({ messages, isStreaming, onQuizSubmit, onSend }: ChatAr
             </div>
           );
         } catch { return null; }
+      case "pdf":
+        try {
+          const pdfInfo = JSON.parse(content.data);
+          return (
+            <div key={idx} className="mt-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-surface)] overflow-hidden">
+              <div className="flex items-start gap-3 p-4">
+                <div className="w-12 h-14 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-6 w-6 text-[var(--accent)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{pdfInfo.title}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{pdfInfo.pageCount} pages</p>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => onSend?.(`Summarize this document`)}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      Summarize
+                    </button>
+                    <button
+                      onClick={() => onSend?.(`What are the key points in this document?`)}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      Key points
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        } catch { return null; }
       default: {
         const text = stripThinkingTags(content.data);
         if (!text) return null;
         return (
-          <div key={idx} className="prose prose-sm prose-invert max-w-none
+          <div key={idx} className="prose prose-sm max-w-none
             prose-p:my-1.5 prose-p:leading-relaxed
             prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
             prose-strong:text-[var(--accent)] prose-strong:font-semibold
@@ -98,7 +133,7 @@ export function ChatArea({ messages, isStreaming, onQuizSubmit, onSend }: ChatAr
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-[var(--accent-muted)] flex items-center justify-center">
-              <span className="text-2xl">🎓</span>
+              <MindMentorLogo size={40} />
             </div>
             <h2 className="text-xl font-semibold text-[var(--text-primary)]">What would you like to learn?</h2>
             <p className="text-sm text-[var(--text-secondary)] max-w-md">
@@ -118,7 +153,7 @@ export function ChatArea({ messages, isStreaming, onQuizSubmit, onSend }: ChatAr
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-3`}>
             {msg.role === "assistant" && (
               <div className="w-8 h-8 rounded-full bg-[var(--accent-muted)] flex-shrink-0 flex items-center justify-center mt-1">
-                <span className="text-sm">🎓</span>
+                <MindMentorLogo size={22} animate={false} />
               </div>
             )}
             <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
@@ -134,7 +169,7 @@ export function ChatArea({ messages, isStreaming, onQuizSubmit, onSend }: ChatAr
         {isStreaming && (
           <div className="flex justify-start gap-3">
             <div className="w-8 h-8 rounded-full bg-[var(--accent-muted)] flex-shrink-0 flex items-center justify-center">
-              <span className="text-sm animate-pulse">🎓</span>
+              <MindMentorLogo size={22} className="animate-pulse" />
             </div>
             <div className="flex items-center gap-2 px-4 py-3">
               <div className="flex space-x-1.5">

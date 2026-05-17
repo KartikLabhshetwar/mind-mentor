@@ -41,7 +41,7 @@ function base64ToBuffer(base64String: string): Uint8Array {
 export function PdfPanel({ userId, onClose }: PdfPanelProps) {
   const [documents, setDocuments] = useState<PdfDocument[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [pdfData, setPdfData] = useState<string | null>(null);
+  const [pdfData, setPdfData] = useState<string | Uint8Array | null>(null);
   const [pdfTitle, setPdfTitle] = useState("");
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,14 +72,25 @@ export function PdfPanel({ userId, onClose }: PdfPanelProps) {
   const loadPdf = useCallback(async (docId: string) => {
     setLoading(true);
     setSelectedDocId(docId);
+    setPdfData(null);
+    setNumPages(0);
     try {
       const res = await fetch(`/api/pdf/${docId}`, {
         headers: { "x-user-id": userId },
       });
-      if (res.ok) {
+      if (!res.ok) return;
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
         const data = await res.json();
-        setPdfData(data.data);
-        setPdfTitle(data.title);
+        if (data.data) {
+          setPdfData(data.data);
+          setPdfTitle(data.title || "Document");
+          setCurrentPage(1);
+        }
+      } else {
+        const buffer = await res.arrayBuffer();
+        setPdfData(new Uint8Array(buffer));
+        setPdfTitle("Document");
         setCurrentPage(1);
       }
     } catch { /* silent */ } finally {
@@ -118,10 +129,11 @@ export function PdfPanel({ userId, onClose }: PdfPanelProps) {
     } catch { /* silent */ }
   }, [userId, selectedDocId]);
 
-  const documentOptions = useMemo(() => ({
-    file: pdfData ? { data: base64ToBuffer(pdfData) } : null,
-    loading: null,
-  }), [pdfData]);
+  const documentOptions = useMemo(() => {
+    if (!pdfData) return { file: null, loading: null };
+    if (pdfData instanceof Uint8Array) return { file: { data: pdfData }, loading: null };
+    return { file: { data: base64ToBuffer(pdfData) }, loading: null };
+  }, [pdfData]);
 
   const pageOptions = useMemo(() => ({
     pageNumber: currentPage,

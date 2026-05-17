@@ -75,7 +75,7 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
     isFullscreen: false
   });
   const [documentData, setDocumentData] = useState({
-    pdfData: null as string | null,
+    pdfData: null as string | Uint8Array | null,
     title: ''
   });
 
@@ -143,16 +143,26 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
     try {
       setUiState(prev => ({ ...prev, loading: true }));
       const response = await fetch(`/api/pdf/${documentId}`);
-      
+
       if (!response.ok) throw new Error('Failed to fetch PDF');
-      
-      const data = await response.json();
-      if (!data.data) throw new Error('No PDF data received from server');
-      if (!data.data.startsWith('data:application/pdf;base64,')) {
-        throw new Error('Invalid PDF data format');
+
+      const contentType = response.headers.get('content-type') || '';
+      let pdfDataUri: string;
+      let title = 'Document';
+
+      let pdfResult: string | Uint8Array;
+
+      if (contentType.includes('application/json')) {
+        const data = await response.json();
+        if (!data.data) throw new Error('No PDF data received from server');
+        pdfResult = data.data.startsWith('data:') ? data.data : `data:application/pdf;base64,${data.data}`;
+        title = data.title || title;
+      } else {
+        const buffer = await response.arrayBuffer();
+        pdfResult = new Uint8Array(buffer);
       }
 
-      setDocumentData({ pdfData: data.data, title: data.title });
+      setDocumentData({ pdfData: pdfResult, title });
       setUiState(prev => ({ ...prev, error: null }));
     } catch (err) {
       console.error('Error fetching PDF:', err);
@@ -239,11 +249,11 @@ export default function PdfViewer({ documentId, currentPage, onPageChange }: Pdf
     },
   }), [viewState.pageNumber, viewState.scale, viewState.rotation]);
 
-  // Update document options
-  const documentOptions = useMemo(() => ({
-    file: documentData.pdfData ? { data: base64ToBuffer(documentData.pdfData) } : null,
-    loading: null, // Remove document loading spinner
-  }), [documentData.pdfData]);
+  const documentOptions = useMemo(() => {
+    if (!documentData.pdfData) return { file: null, loading: null };
+    if (documentData.pdfData instanceof Uint8Array) return { file: { data: documentData.pdfData }, loading: null };
+    return { file: { data: base64ToBuffer(documentData.pdfData) }, loading: null };
+  }, [documentData.pdfData]);
 
   return (
     <div className={cn(

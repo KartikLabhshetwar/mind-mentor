@@ -6,6 +6,7 @@ import { ChatHistory } from "@/components/unified/ChatHistory";
 import { ChatArea, type Message, type MessageContent } from "@/components/unified/ChatArea";
 import { ChatInput } from "@/components/unified/ChatInput";
 import { streamChat } from "@/lib/agent-client";
+import { ContextPanel } from "@/components/unified/ContextPanel";
 import { PanelRight } from "lucide-react";
 
 export default function UnifiedDashboard() {
@@ -94,8 +95,8 @@ export default function UnifiedDashboard() {
       </div>
 
       {contextPanelOpen && (
-        <div className="hidden lg:block w-72 border-l border-[var(--border-color)] bg-[var(--bg-secondary)] p-4">
-          <p className="text-xs text-[var(--text-muted)]">Context panel loading...</p>
+        <div className="hidden lg:block w-72 border-l border-[var(--border-color)] bg-[var(--bg-secondary)] overflow-hidden">
+          <ContextPanel onTriggerCommand={(cmd) => handleSend(cmd)} />
         </div>
       )}
     </div>

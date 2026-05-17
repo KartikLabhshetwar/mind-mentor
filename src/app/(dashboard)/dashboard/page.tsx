@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { ChatArea, type Message, type MessageContent } from "@/components/unified/ChatArea";
 import { ChatInput } from "@/components/unified/ChatInput";
@@ -31,6 +31,18 @@ export default function UnifiedDashboard() {
   const [activePdfTitle, setActivePdfTitle] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadingFileName, setUploadingFileName] = useState<string | null>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!historyOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
+        setHistoryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [historyOpen]);
 
   const fetchHistory = useCallback(async () => {
     if (!session?.token) return;
@@ -42,9 +54,16 @@ export default function UnifiedDashboard() {
     } catch { /* silent */ }
   }, [session?.token]);
 
-  const saveMessages = useCallback(async (userContent: string, assistantContent: string) => {
+  const saveMessages = useCallback(async (userContent: string, assistantContent: string, structuredParts?: MessageContent[]) => {
     if (!session?.token) return;
     try {
+      let serializedAssistant = assistantContent;
+      if (structuredParts && structuredParts.length > 0) {
+        const allContent: MessageContent[] = assistantContent
+          ? [{ type: "text", data: assistantContent }, ...structuredParts]
+          : structuredParts;
+        serializedAssistant = JSON.stringify({ __structured: true, parts: allContent });
+      }
       const res = await fetch(`${API_URL}/api/user/chat-history`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
@@ -52,7 +71,7 @@ export default function UnifiedDashboard() {
           conversationId: conversationIdRef.current,
           messages: [
             { role: "user", content: userContent },
-            { role: "assistant", content: assistantContent },
+            { role: "assistant", content: serializedAssistant },
           ],
         }),
       });
@@ -82,10 +101,20 @@ export default function UnifiedDashboard() {
       });
       if (res.ok) {
         const conv = await res.json();
-        const loaded: Message[] = conv.messages.map((m: { role: string; content: string }) => ({
-          role: m.role as "user" | "assistant",
-          content: [{ type: "text" as const, data: m.content }],
-        }));
+        const loaded: Message[] = conv.messages.map((m: { role: string; content: string }) => {
+          if (m.role === "assistant") {
+            try {
+              const parsed = JSON.parse(m.content);
+              if (parsed.__structured && Array.isArray(parsed.parts)) {
+                return { role: "assistant" as const, content: parsed.parts as MessageContent[] };
+              }
+            } catch { /* not structured JSON, treat as plain text */ }
+          }
+          return {
+            role: m.role as "user" | "assistant",
+            content: [{ type: "text" as const, data: m.content }],
+          };
+        });
         setMessages(loaded);
       }
     } catch { /* silent */ }
@@ -117,17 +146,24 @@ export default function UnifiedDashboard() {
         const answer = data.message || data.answer || "";
         const sourcePages = data.sourcePages || [];
         const sourceText = sourcePages.length > 0 ? `\n\n*Sources: pages ${sourcePages.join(", ")}*` : "";
+        const pdfMeta: MessageContent = { type: "pdf" as const, data: JSON.stringify({ title: activePdfTitle || "PDF", id: documentId }) };
         const assistantMsg: Message = {
           role: "assistant",
           content: [{ type: "text", data: answer + sourceText }],
         };
         setMessages(prev => [...prev, assistantMsg]);
-        saveMessages(question, answer + sourceText);
+        saveMessages(question, answer + sourceText, [pdfMeta]);
+      } else {
+        const errData = await res.json().catch(() => null);
+        const errMsg = errData?.error || `PDF chat failed (${res.status})`;
+        setMessages(prev => [...prev, { role: "assistant", content: [{ type: "text", data: `Error: ${errMsg}` }] }]);
       }
-    } catch { /* silent */ } finally {
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", content: [{ type: "text", data: "Error: Failed to connect to PDF service" }] }]);
+    } finally {
       setIsStreaming(false);
     }
-  }, [session?.user?.id, saveMessages]);
+  }, [session?.user?.id, saveMessages, activePdfTitle]);
 
   const handleSend = useCallback(async (message: string) => {
     if (!session?.token) return;
@@ -172,9 +208,21 @@ export default function UnifiedDashboard() {
       },
       () => {
         setIsStreaming(false);
-        saveMessages(message, currentText);
+        const nonTextParts = structuredContent.filter(c => c.type !== "text");
+        saveMessages(message, currentText, nonTextParts.length > 0 ? nonTextParts : undefined);
       },
-      () => setIsStreaming(false)
+      (error) => {
+        setIsStreaming(false);
+        if (currentText) {
+          saveMessages(message, currentText);
+        } else {
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: [{ type: "text", data: `Error: ${error}` }] };
+            return updated;
+          });
+        }
+      }
     );
   }, [session, saveMessages, activePdfId, handlePdfChat]);
 
@@ -193,13 +241,15 @@ export default function UnifiedDashboard() {
           setActivePdfId(doc._id);
           setActivePdfTitle(doc.title);
           setPdfPanelOpen(true);
+          conversationIdRef.current = null;
+          setActiveConversationId(null);
+          const pdfContent: MessageContent = { type: "pdf" as const, data: JSON.stringify({ title: doc.title, pageCount: doc.pageCount, id: doc._id }) };
+          const textContent = `I've loaded **"${doc.title}"** (${doc.pageCount} pages). Ask me anything — I can summarize, explain concepts, or answer specific questions.`;
           setMessages([{
             role: "assistant",
-            content: [
-              { type: "pdf" as const, data: JSON.stringify({ title: doc.title, pageCount: doc.pageCount, id: doc._id }) },
-              { type: "text", data: `I've loaded **"${doc.title}"** (${doc.pageCount} pages). Ask me anything — I can summarize, explain concepts, or answer specific questions.` },
-            ],
+            content: [pdfContent, { type: "text", data: textContent }],
           }]);
+          saveMessages(`[Uploaded PDF: ${doc.title}]`, textContent, [pdfContent]);
         }
       } catch { /* silent */ } finally {
         setUploading(false);
@@ -211,20 +261,21 @@ export default function UnifiedDashboard() {
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = () => {
-        const dataUrl = reader.result as string;
+        const imageText = `[Uploaded image: ${file.name}]`;
+        const responseText = `Image "${file.name}" received. You can ask me questions about its content alongside your studies.`;
         setMessages(prev => [...prev, {
           role: "user",
-          content: [{ type: "text", data: `[Uploaded image: ${file.name}]` }],
+          content: [{ type: "text", data: imageText }],
         }]);
         setMessages(prev => [...prev, {
           role: "assistant",
-          content: [{ type: "text", data: `Image "${file.name}" received. You can ask me questions about its content alongside your studies.` }],
+          content: [{ type: "text", data: responseText }],
         }]);
-        void dataUrl;
+        saveMessages(imageText, responseText);
       };
       reader.readAsDataURL(file);
     }
-  }, []);
+  }, [saveMessages]);
 
   const handleQuizSubmit = async (quizId: string, answers: { questionIndex: number; answer: number }[], questions: { question: string; options: string[]; correctAnswer: number }[]) => {
     try {
@@ -239,7 +290,15 @@ export default function UnifiedDashboard() {
   const getTitle = (conv: Conversation) => {
     const first = conv.messages.find(m => m.role === "user");
     if (!first) return "New Chat";
-    return first.content.slice(0, 50) + (first.content.length > 50 ? "..." : "");
+    let text = first.content;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.__structured && Array.isArray(parsed.parts)) {
+        const textPart = parsed.parts.find((p: { type: string }) => p.type === "text");
+        text = textPart?.data || "Chat";
+      }
+    } catch { /* plain text */ }
+    return text.slice(0, 50) + (text.length > 50 ? "..." : "");
   };
 
   return (
@@ -285,7 +344,7 @@ export default function UnifiedDashboard() {
 
       {/* History dropdown */}
       {historyOpen && (
-        <div className="absolute z-40 top-14 left-2 w-72 max-h-80 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-lg overflow-y-auto">
+        <div ref={historyRef} className="absolute z-40 top-14 left-2 w-72 max-h-80 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-lg overflow-y-auto">
           <div className="p-2 space-y-0.5">
             {conversations.length === 0 && (
               <p className="text-xs text-[var(--text-muted)] p-3 text-center">No conversations yet</p>

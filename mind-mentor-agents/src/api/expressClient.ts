@@ -49,13 +49,34 @@ export function createExpressClient(env: Env) {
       return res.json();
     },
 
-    async curateResources(userId: string, subject: string) {
+    async curateResources(userId: string, subject: string): Promise<{
+      success?: boolean;
+      message?: string;
+      resources?: { resources: { title: string; link: string; description: string }[] };
+    } | null> {
       try {
         const res = await fetch(`${baseUrl}/curate-resources`, {
           method: "POST",
           headers,
           body: JSON.stringify({ userId, subject }),
         });
+        return res.json();
+      } catch {
+        return null;
+      }
+    },
+
+    async webSearch(query: string): Promise<{
+      answer?: string | null;
+      results: { title: string; url: string; content: string; score: number }[];
+    } | null> {
+      try {
+        const res = await fetch(`${baseUrl}/web-search`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ query }),
+        });
+        if (!res.ok) return null;
         return res.json();
       } catch {
         return null;

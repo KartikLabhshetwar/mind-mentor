@@ -161,9 +161,9 @@ async function searchTavily(subject) {
       body: JSON.stringify({
         query: `best free learning resources tutorials courses guides documentation for learning ${subject}`,
         search_depth: "advanced",
-        include_answer: true,
+        include_answer: "basic",
         max_results: 15,
-        search_type: "learning",
+        topic: "general",
         include_domains: [
           "coursera.org",
           "khanacademy.org",
@@ -178,7 +178,6 @@ async function searchTavily(subject) {
           "udacity.com",
         ],
       }),
-      agent: httpsAgent, // Use our custom HTTPS agent
     });
 
     if (!response.ok) {
@@ -196,103 +195,81 @@ async function searchTavily(subject) {
 }
 
 async function curateResources(searchData, subject) {
-  // Cache key for curated resources
   const cacheKey = `resources_${subject}`;
 
-  // Check cache first
   const cachedResult = cache.get(cacheKey);
   if (cachedResult) {
     return cachedResult;
   }
 
-  try {
-    // Reduce the search results to minimize token usage
-    const limitedResults = searchData.results?.slice(0, 5) || [];
-    const summarizedContext = limitedResults.map((r) => ({
-      title: r.title,
-      url: r.url,
-      description: r.description?.slice(0, 100), // Limit description length
-    }));
+  const tavilyResults = searchData.results?.slice(0, 10) || [];
+  if (tavilyResults.length === 0) {
+    return { resources: [] };
+  }
 
+  // Take top 5 Tavily results — URLs are real and verified by Tavily
+  const topResults = tavilyResults.slice(0, 5);
+
+  try {
+    // Use LLM only for enriching descriptions — NOT for selecting URLs
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "system",
-          content: `You are an expert educator who curates high-quality learning resources. 
-          Your task is to analyze search results and create a curated list of the best free learning resources.
-          Focus on reputable platforms, comprehensive tutorials, and well-structured courses.
-          Always verify resources are freely accessible and relevant.
-          Respond in JSON format only.`,
+          content: `You enrich learning resource metadata. You will receive exactly ${topResults.length} resources with fixed URLs. Write a description, format type, and benefits for each. Do NOT change the url or title. Respond in JSON only.`,
         },
         {
           role: "user",
-          content: `Analyze and curate exactly 5 of the most valuable and high-quality free learning resources for ${subject}.
-          
-          Context:
-          ${JSON.stringify(summarizedContext, null, 2)}
-          
-          Requirements:
-          1. Resources must be completely free to access
-          2. Include a mix of different learning formats (video, interactive, documentation, etc.)
-          3. Focus on beginner-friendly but comprehensive resources
-          4. Prioritize well-known educational platforms and official documentation
-          5. Each resource should offer clear learning value
-          
-          Return a JSON response with exactly 5 resources in this format:
-          {
-            "resources": [
-              {
-                "title": "Resource name (include platform name if relevant)",
-                "url": "Direct URL to the resource",
-                "description": "Detailed 2-3 sentence description of what the resource offers",
-                "format": "Type of resource (e.g., Video Course, Interactive Tutorial, Documentation, etc.)",
-                "benefits": [
-                  "Specific benefit or feature that makes this resource valuable",
-                  "Another unique advantage of this resource",
-                  "Why this resource is particularly good for learning this subject"
-                ]
-              }
-            ]
-          }`,
+          content: `Enrich these ${topResults.length} learning resources for "${subject}". Keep url and title exactly as given.
+
+${JSON.stringify(topResults.map((r, i) => ({ index: i, title: r.title, url: r.url, content: r.content?.slice(0, 200) })), null, 2)}
+
+Return JSON:
+{
+  "resources": [
+    {
+      "index": 0,
+      "description": "2-3 sentence description",
+      "format": "Video Course | Interactive Tutorial | Documentation | Article | Guide",
+      "benefits": ["benefit 1", "benefit 2", "benefit 3"]
+    }
+  ]
+}`,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 2000,
+      temperature: 0.3,
+      max_tokens: 1500,
       top_p: 1,
       stream: false,
       response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(completion.choices[0]?.message?.content || "{}");
-
-    // Validate the result structure
-    if (
-      !result.resources ||
-      !Array.isArray(result.resources) ||
-      result.resources.length === 0
-    ) {
-      throw new Error("Invalid resource format received from AI");
+    const enrichment = JSON.parse(completion.choices[0]?.message?.content || "{}");
+    const enrichMap = new Map();
+    if (enrichment.resources) {
+      for (const r of enrichment.resources) {
+        enrichMap.set(r.index, r);
+      }
     }
 
-    // Ensure each resource has all required fields
-    const validatedResources = result.resources.map((resource) => ({
-      title: resource.title || `${subject} Learning Resource`,
-      url: resource.url || "#",
-      description:
-        resource.description || `A curated resource for learning ${subject}`,
-      format: resource.format || "website",
-      benefits: resource.benefits || [`Learn ${subject} effectively`],
-    }));
+    // Build final resources — URLs always come from Tavily, never from LLM
+    const resources = topResults.map((r, i) => {
+      const enriched = enrichMap.get(i) || {};
+      return {
+        title: r.title || `${subject} Learning Resource`,
+        url: r.url,
+        description: enriched.description || r.content?.slice(0, 200) || `Resource for learning ${subject}`,
+        format: enriched.format || "Website",
+        benefits: enriched.benefits || [`Learn ${subject} effectively`],
+      };
+    });
 
-    const finalResult = { resources: validatedResources };
-
-    // Cache the result
+    const finalResult = { resources };
     cache.set(cacheKey, finalResult);
     return finalResult;
   } catch (error) {
     console.error("Groq error:", error);
-    // Check if it's a rate limit error
     if (error.status === 429 || error.status === 413) {
       const retryAfter = error.headers?.["retry-after"] || 60;
       throw {
@@ -302,7 +279,15 @@ async function curateResources(searchData, subject) {
         retryAfter,
       };
     }
-    throw error;
+    // Fallback: return Tavily results without LLM enrichment
+    const fallbackResources = topResults.map((r) => ({
+      title: r.title || `${subject} Learning Resource`,
+      url: r.url,
+      description: r.content?.slice(0, 200) || `Resource for learning ${subject}`,
+      format: "Website",
+      benefits: [`Learn ${subject} effectively`],
+    }));
+    return { resources: fallbackResources };
   }
 }
 
@@ -423,5 +408,49 @@ async function generatePlan(subject, userId, examDate) {
   }
 }
 
+async function webSearch(query) {
+  const cacheKey = `websearch_${query}`;
+  const cachedResult = cache.get(cacheKey);
+  if (cachedResult) return cachedResult;
+
+  try {
+    const response = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query,
+        search_depth: "basic",
+        include_answer: "basic",
+        max_results: 10,
+        topic: "general",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Tavily web search failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const result = {
+      answer: data.answer || null,
+      results: (data.results || []).map((r) => ({
+        title: r.title,
+        url: r.url,
+        content: r.content?.slice(0, 300),
+        score: r.score,
+      })),
+    };
+
+    cache.set(cacheKey, result);
+    return result;
+  } catch (error) {
+    console.error("Web search error:", error);
+    return { answer: null, results: [] };
+  }
+}
+
 // Export the functions and rate limiter
-export { aiRateLimiter, searchTavily, curateResources, generatePlan };
+export { aiRateLimiter, searchTavily, curateResources, generatePlan, webSearch };

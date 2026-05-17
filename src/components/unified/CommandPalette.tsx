@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FileUp, BookOpen, Brain, HelpCircle, BarChart3, ClipboardList, RefreshCw } from "lucide-react";
+import { FileUp, BookOpen, Brain, HelpCircle, BarChart3, ClipboardList, RefreshCw, Globe } from "lucide-react";
 
 interface Command {
   name: string;
@@ -13,6 +13,7 @@ interface Command {
 const commands: Command[] = [
   { name: "/quiz", description: "Generate a quiz on any topic", icon: ClipboardList, action: "quiz" },
   { name: "/resources", description: "Find learning resources", icon: Brain, action: "resources" },
+  { name: "/search", description: "Search the web for anything", icon: Globe, action: "search" },
   { name: "/plan", description: "Create or view study plan", icon: BookOpen, action: "plan" },
   { name: "/pdf", description: "Upload and chat with PDF", icon: FileUp, action: "pdf" },
   { name: "/review", description: "Review weak topics (spaced repetition)", icon: RefreshCw, action: "review" },

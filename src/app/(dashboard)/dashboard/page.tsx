@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { ChatHistory } from "@/components/unified/ChatHistory";
+import { ChatArea, type Message, type MessageContent } from "@/components/unified/ChatArea";
+import { ChatInput } from "@/components/unified/ChatInput";
+import { streamChat } from "@/lib/agent-client";
 import { PanelRight } from "lucide-react";
 
 export default function UnifiedDashboard() {
@@ -10,10 +13,62 @@ export default function UnifiedDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [contextPanelOpen, setContextPanelOpen] = useState(true);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  const handleSend = useCallback(async (message: string) => {
+    if (!session?.token) return;
+
+    const command = message.startsWith("/") ? message.split(" ")[0].slice(1) : undefined;
+    const userMsg: Message = { role: "user", content: [{ type: "text", data: message }] };
+    setMessages(prev => [...prev, userMsg]);
+    setIsStreaming(true);
+
+    const structuredContent: MessageContent[] = [];
+    let currentText = "";
+    setMessages(prev => [...prev, { role: "assistant", content: [] }]);
+
+    await streamChat(
+      message,
+      session.token,
+      { page: "/dashboard", command },
+      (event) => {
+        if (event.type === "text") {
+          currentText += event.data;
+          const textContent: MessageContent = { type: "text", data: currentText };
+          const nonTextContent = structuredContent.filter(c => c.type !== "text");
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: [textContent, ...nonTextContent] };
+            return updated;
+          });
+        } else {
+          structuredContent.push(event);
+          const textContent = currentText ? [{ type: "text" as const, data: currentText }] : [];
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: [...textContent, ...structuredContent] };
+            return updated;
+          });
+        }
+      },
+      () => setIsStreaming(false),
+      () => setIsStreaming(false)
+    );
+  }, [session]);
+
+  const handleQuizSubmit = async (quizId: string, answers: { questionIndex: number; answer: number }[]) => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/quiz/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quizId, answers }),
+      });
+    } catch { /* silent */ }
+  };
 
   return (
     <div className="unified-dark h-screen flex bg-[var(--bg-primary)] overflow-hidden">
-      {/* Left Sidebar */}
       <div className="hidden md:block">
         <ChatHistory
           isCollapsed={sidebarCollapsed}
@@ -23,9 +78,7 @@ export default function UnifiedDashboard() {
         />
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-color)]">
           <h1 className="text-sm font-semibold text-[var(--text-primary)]">Mind Mentor</h1>
           <button
@@ -36,26 +89,10 @@ export default function UnifiedDashboard() {
           </button>
         </div>
 
-        {/* Chat content placeholder */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-3">
-            <div className="w-16 h-16 rounded-full bg-[var(--accent-muted)] flex items-center justify-center mx-auto">
-              <span className="text-2xl">🎓</span>
-            </div>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)]">What would you like to learn?</h2>
-            <p className="text-sm text-[var(--text-secondary)]">Ask anything, generate quizzes, find resources, or plan your studies.</p>
-          </div>
-        </div>
-
-        {/* Input placeholder */}
-        <div className="px-4 pb-4">
-          <div className="max-w-3xl mx-auto bg-[var(--input-bg)] rounded-xl px-4 py-3 text-[var(--text-muted)] text-sm">
-            Type / for commands...
-          </div>
-        </div>
+        <ChatArea messages={messages} isStreaming={isStreaming} onQuizSubmit={handleQuizSubmit} />
+        <ChatInput onSend={handleSend} disabled={isStreaming} />
       </div>
 
-      {/* Right Context Panel placeholder */}
       {contextPanelOpen && (
         <div className="hidden lg:block w-72 border-l border-[var(--border-color)] bg-[var(--bg-secondary)] p-4">
           <p className="text-xs text-[var(--text-muted)]">Context panel loading...</p>

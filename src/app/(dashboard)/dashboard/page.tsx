@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { ChatArea, type Message, type MessageContent } from "@/components/unified/ChatArea";
 import { ChatInput } from "@/components/unified/ChatInput";
-import { streamChat } from "@/lib/agent-client";
+import { streamChat, type ChatHistoryMessage } from "@/lib/agent-client";
 import { ContextPanel } from "@/components/unified/ContextPanel";
 import { PdfPanel } from "@/components/unified/PdfPanel";
 import { PanelRight, X, History, Plus, FileText } from "lucide-react";
@@ -165,6 +165,21 @@ export default function UnifiedDashboard() {
     }
   }, [session?.user?.id, saveMessages, activePdfTitle]);
 
+  const buildHistory = useCallback((msgs: Message[]): ChatHistoryMessage[] => {
+    return msgs
+      .map((m) => {
+        const text = m.content
+          .filter((c) => c.type === "text")
+          .map((c) => c.data)
+          .join("\n")
+          .trim();
+        if (!text) return null;
+        return { role: m.role, content: text };
+      })
+      .filter((m): m is ChatHistoryMessage => m !== null)
+      .slice(-20);
+  }, []);
+
   const handleSend = useCallback(async (message: string) => {
     if (!session?.token) return;
 
@@ -175,6 +190,7 @@ export default function UnifiedDashboard() {
 
     const command = message.startsWith("/") ? message.split(" ")[0].slice(1) : undefined;
     const userMsg: Message = { role: "user", content: [{ type: "text", data: message }] };
+    const history = buildHistory(messages);
     setMessages(prev => [...prev, userMsg]);
     setIsStreaming(true);
 
@@ -222,9 +238,10 @@ export default function UnifiedDashboard() {
             return updated;
           });
         }
-      }
+      },
+      history
     );
-  }, [session, saveMessages, activePdfId, handlePdfChat]);
+  }, [session, saveMessages, activePdfId, handlePdfChat, messages, buildHistory]);
 
   const handleFileUpload = useCallback(async (file: File) => {
     if (file.size > 10 * 1024 * 1024) return;

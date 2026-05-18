@@ -13,13 +13,19 @@ export interface ChatEvent {
   data: string;
 }
 
+export interface ChatHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export async function streamChat(
   message: string,
   token: string,
   context: ChatContext,
   onEvent: (event: ChatEvent) => void,
   onDone: () => void,
-  onError: (error: string) => void
+  onError: (error: string) => void,
+  history?: ChatHistoryMessage[]
 ) {
   try {
     const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:8787";
@@ -29,7 +35,7 @@ export async function streamChat(
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ message, context }),
+      body: JSON.stringify({ message, context, history }),
     });
 
     if (!response.ok) {

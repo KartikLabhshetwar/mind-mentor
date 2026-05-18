@@ -12,9 +12,10 @@ tutorRoutes.use("*", verifyUserAuth);
 
 tutorRoutes.post("/chat", async (c) => {
   const userId = c.get("userId");
-  const { message, context } = await c.req.json<{
+  const { message, context, history } = await c.req.json<{
     message: string;
     context?: { page?: string; subject?: string; command?: string };
+    history?: { role: "user" | "assistant"; content: string }[];
   }>();
 
   const groq = new Groq({ apiKey: c.env.GROQ_API_KEY });
@@ -127,12 +128,21 @@ Instructions:
 
   return streamSSE(c, async (stream) => {
     try {
+      const conversationMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemPrompt },
+      ];
+      if (history && Array.isArray(history)) {
+        for (const msg of history.slice(-20)) {
+          if (msg.role === "user" || msg.role === "assistant") {
+            conversationMessages.push({ role: msg.role, content: msg.content });
+          }
+        }
+      }
+      conversationMessages.push({ role: "user", content: message });
+
       const completion = await groq.chat.completions.create({
         model: "qwen/qwen3-32b",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: message },
-        ],
+        messages: conversationMessages,
         stream: true,
         max_tokens: 2000,
         temperature: 0.7,
@@ -150,12 +160,16 @@ Instructions:
 
       await stream.writeSSE({ event: "done", data: "" });
 
-      // Save to mem0 (non-blocking)
-      const observation = message.length > 20
-        ? `User asked about: "${message.slice(0, 100)}". Discussion covered this topic.`
-        : null;
-      if (observation) {
-        addUserMemory(mem0, userId, observation, "session_context");
+      // Save conversation exchange to mem0 for long-term memory
+      if (message.length > 10) {
+        const memoryMessages = [
+          { role: "user" as const, content: message },
+          { role: "assistant" as const, content: fullResponse.slice(0, 1000) },
+        ];
+        mem0.add(memoryMessages, {
+          user_id: userId,
+          metadata: { category: "session_context" },
+        }).catch((err: unknown) => console.error("mem0 save error:", err));
       }
 
       // Extract topics and update mastery (non-blocking)

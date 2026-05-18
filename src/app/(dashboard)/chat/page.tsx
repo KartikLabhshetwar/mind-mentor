@@ -19,6 +19,11 @@ export default function ChatPage() {
   const handleSend = useCallback(async (message: string) => {
     if (!session?.token) return;
 
+    const history = messages
+      .filter((m) => m.content.trim())
+      .slice(-20)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setIsStreaming(true);
 
@@ -40,9 +45,10 @@ export default function ChatPage() {
         }
       },
       () => setIsStreaming(false),
-      () => setIsStreaming(false)
+      () => setIsStreaming(false),
+      history
     );
-  }, [session]);
+  }, [session, messages]);
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col">

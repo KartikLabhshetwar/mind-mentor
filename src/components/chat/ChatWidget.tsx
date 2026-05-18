@@ -22,6 +22,11 @@ export function ChatWidget() {
   const handleSend = useCallback(async (message: string) => {
     if (!session?.token) return;
 
+    const history = messages
+      .filter((m) => m.content.trim())
+      .slice(-20)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setIsStreaming(true);
 
@@ -50,9 +55,10 @@ export function ChatWidget() {
           return updated;
         });
         setIsStreaming(false);
-      }
+      },
+      history
     );
-  }, [session, pathname]);
+  }, [session, pathname, messages]);
 
   return (
     <>

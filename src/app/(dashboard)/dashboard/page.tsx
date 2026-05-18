@@ -44,6 +44,25 @@ export default function UnifiedDashboard() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [historyOpen]);
 
+  const loadPdfChatHistory = useCallback(async (pdfId: string) => {
+    if (!session?.user?.id) return;
+    try {
+      const res = await fetch(`/api/pdf/${pdfId}/history`, {
+        headers: { "x-user-id": session.user.id },
+      });
+      if (res.ok) {
+        const history = await res.json();
+        if (Array.isArray(history) && history.length > 0) {
+          const loaded: Message[] = history.map((m: { role: string; content: string }) => ({
+            role: m.role as "user" | "assistant",
+            content: [{ type: "text" as const, data: m.content }],
+          }));
+          setMessages(loaded);
+        }
+      }
+    } catch { /* silent */ }
+  }, [session?.user?.id]);
+
   const fetchHistory = useCallback(async () => {
     if (!session?.token) return;
     try {
@@ -92,6 +111,8 @@ export default function UnifiedDashboard() {
     setHistoryOpen(false);
     if (!id) {
       setMessages([]);
+      setActivePdfId(null);
+      setActivePdfTitle(null);
       return;
     }
     if (!session?.token) return;
@@ -101,11 +122,24 @@ export default function UnifiedDashboard() {
       });
       if (res.ok) {
         const conv = await res.json();
+        let restoredPdfId: string | null = null;
+        let restoredPdfTitle: string | null = null;
+
         const loaded: Message[] = conv.messages.map((m: { role: string; content: string }) => {
           if (m.role === "assistant") {
             try {
               const parsed = JSON.parse(m.content);
               if (parsed.__structured && Array.isArray(parsed.parts)) {
+                const pdfPart = parsed.parts.find((p: { type: string }) => p.type === "pdf");
+                if (pdfPart) {
+                  try {
+                    const pdfMeta = JSON.parse(pdfPart.data);
+                    if (pdfMeta.id) {
+                      restoredPdfId = pdfMeta.id;
+                      restoredPdfTitle = pdfMeta.title || "PDF";
+                    }
+                  } catch { /* ignore */ }
+                }
                 return { role: "assistant" as const, content: parsed.parts as MessageContent[] };
               }
             } catch { /* not structured JSON, treat as plain text */ }
@@ -116,6 +150,8 @@ export default function UnifiedDashboard() {
           };
         });
         setMessages(loaded);
+        setActivePdfId(restoredPdfId);
+        setActivePdfTitle(restoredPdfTitle);
       }
     } catch { /* silent */ }
   }, [session?.token]);
@@ -407,6 +443,14 @@ export default function UnifiedDashboard() {
               onChatWithPdf={(docId, question) => {
                 setActivePdfId(docId);
                 handlePdfChat(docId, question);
+              }}
+              onSelectPdf={(docId, title) => {
+                setActivePdfId(docId);
+                setActivePdfTitle(title);
+                conversationIdRef.current = null;
+                setActiveConversationId(null);
+                setMessages([]);
+                loadPdfChatHistory(docId);
               }}
               onClose={() => setPdfPanelOpen(false)}
             />

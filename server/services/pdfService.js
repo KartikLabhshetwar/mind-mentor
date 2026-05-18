@@ -94,6 +94,8 @@ You are an advanced AI educational assistant specializing in document analysis a
 Context from the document:
 {context}
 
+{chatHistory}
+
 Question: {question}
 
 Instructions for crafting your response:
@@ -282,24 +284,25 @@ export async function chatWithPdf(pdfInput, question, chatHistory = []) {
       console.log('✅ Using cached vector store');
     }
 
-    // Cache key for the query
-    const cacheKey = `pdf_query_${pdfHash}_${question}_${chatHistory.length}`;
-    const cachedResult = cache.get(cacheKey);
-    if (cachedResult) {
-      console.log('✅ Using cached query result');
-      return cachedResult;
-    }
-
     // Retrieve relevant documents
     const retrievedDocs = await vectorStore.similaritySearch(question, 3);
-    
+
     // Format documents content
     const context = retrievedDocs.map(doc => doc.pageContent).join('\n\n');
+
+    // Format chat history for context
+    const recentHistory = Array.isArray(chatHistory) ? chatHistory.slice(-10) : [];
+    const formattedHistory = recentHistory.length > 0
+      ? "Previous conversation:\n" + recentHistory.map(m =>
+          `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content.slice(0, 300)}`
+        ).join('\n')
+      : "";
 
     // Create the RAG chain
     const chain = RunnableSequence.from([
       {
         context: () => context,
+        chatHistory: () => formattedHistory,
         question: (input) => input.question
       },
       promptTemplate,
@@ -323,16 +326,11 @@ export async function chatWithPdf(pdfInput, question, chatHistory = []) {
       content: doc.pageContent.substring(0, 150) + '...' // Preview of content
     }));
 
-    const result = {
+    return {
       answer: response,
       sourcePages: sourcePages,
       sources: formattedSources
     };
-
-    // Cache the result
-    cache.set(cacheKey, result);
-
-    return result;
   } catch (error) {
     console.error('Error in PDF chat:', error);
     throw error;

@@ -22,6 +22,7 @@ export interface PdfDocument {
 interface PdfPanelProps {
   userId: string;
   onChatWithPdf: (documentId: string, question: string) => void;
+  onSelectPdf?: (documentId: string, title: string) => void;
   onClose: () => void;
 }
 
@@ -38,7 +39,7 @@ function base64ToBuffer(base64String: string): Uint8Array {
   return buffer;
 }
 
-export function PdfPanel({ userId, onClose }: PdfPanelProps) {
+export function PdfPanel({ userId, onSelectPdf, onClose }: PdfPanelProps) {
   const [documents, setDocuments] = useState<PdfDocument[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [pdfData, setPdfData] = useState<string | Uint8Array | null>(null);
@@ -186,7 +187,7 @@ export function PdfPanel({ userId, onClose }: PdfPanelProps) {
               <div
                 key={doc._id}
                 className="group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[var(--bg-surface)] cursor-pointer transition-colors"
-                onClick={() => loadPdf(doc._id)}
+                onClick={() => { loadPdf(doc._id); onSelectPdf?.(doc._id, doc.title); }}
               >
                 <FileText className="h-4 w-4 text-[var(--accent)] flex-shrink-0" />
                 <div className="flex-1 min-w-0">
